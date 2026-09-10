@@ -1,187 +1,110 @@
-# ALTAVISTA — Permanent Claude Code Rules
+# ALTAMAR — Project Rules
 
-## Product invariant
+## What this is
 
-ALTAVISTA is a **single-owner sales catalog**. One owner publishes items they personally have for sale. Real estate is expected to be prominent, but inventory may include vehicles, boats, watches, land, furniture, electronics, collectibles, or any arbitrary item.
+ALTAMAR is a premium, **single-owner** sales catalog for the Dominican
+Republic (properties, vehicles, land, boats, watches, or any other item the
+owner has for sale). It is **not** a marketplace. Contact (WhatsApp/phone/
+email) is the only conversion — there is no cart, checkout, payments,
+shipping, customer accounts, or vendor concept anywhere in this codebase.
+Never introduce any of those without an explicit new request.
 
-Never introduce:
+## Invariants that must never be violated
 
-- vendors or seller accounts
-- marketplace concepts
-- public registration
-- customer accounts
-- cart
-- checkout
-- payments
-- shipping
-- order management
-- reviews/ratings
-- bidding
-- CRM
-- speculative analytics
+- **No inventory limit.** The homepage shows up to 6 items; that is a display
+  choice, never a database or query limit. `/en-venta` paginates the full
+  catalog.
+- **Generic product model.** One `products` table with a code-side type
+  registry (`src/config/product-types.ts`) and an ordered JSONB `attributes`
+  array. Never add a per-type table (no `PropertyTable`, `VehicleTable`, …).
+  A new item type is a registry entry, not a migration.
+- **No dead controls.** Every visible button/link must do something real. If
+  a feature isn't built, the control doesn't exist.
+- **Publication is server-enforced.** `publishProduct()` in
+  `src/server/actions/product.ts` validates the full contract (title, slug,
+  type, description ≥20 chars, valid price config, ≥1 image, cover image)
+  server-side. A disabled frontend button is never the only gate.
+- **Drafts are invisible publicly at the database level** via RLS
+  (`status <> 'DRAFT'` policy on `products`/`product_images`), not just an
+  application filter.
+- **Three independent admin security layers**: middleware/proxy redirect (UX
+  only) → `requireAdmin()` in `src/server/auth.ts` (the real boundary,
+  validates the JWT + `admins` allow-list membership) → RLS. There is no
+  public admin registration route anywhere; accounts are created with
+  `pnpm admin:create <email> <password>`.
+- **Status policy**: DRAFT never public · AVAILABLE public+contactable ·
+  RESERVED public with a badge, still contactable · SOLD excluded from the
+  default `/en-venta` listing but its direct URL stays live and labeled
+  "Vendido" (so shared links never break).
 
-**Contact is the conversion.** Public actions are browsing, viewing details, and contacting the owner.
+## Image pipeline
 
-## No inventory limit
+Cloudinary, signed direct-upload only. `CLOUDINARY_API_SECRET` and
+`SUPABASE_SERVICE_ROLE_KEY` are read only in server-only modules
+(`src/lib/env.ts`, `src/lib/cloudinary/*`) — never in a Client Component.
+After upload, the server re-fetches the resource from Cloudinary's Admin API
+and validates the *real* format/size/dimensions before writing a row
+(`src/lib/cloudinary/verify.ts`) — the browser's report is never trusted.
+Card crops use `fill` (4:3, content-aware); detail/gallery uses `limit`
+(never crops) — see `src/lib/cloudinary/loader.ts`. Cover image = the row at
+`position = 0`; there is no separate `is_cover` flag. Reorder is atomic via
+the `reorder_product_images` Postgres RPC (two-pass negative-offset swap) to
+avoid partial-failure position collisions.
 
-There is **no maximum of 6 products**. The owner may publish arbitrary inventory. A 3x2 grid is only a visual composition, never a business or database limit.
+## Stack
 
-## Generic product rule
+Next.js 16 (App Router, TypeScript strict, `noUncheckedIndexedAccess`),
+Tailwind v4, Supabase Postgres/Auth, Cloudinary, Zod, React Hook Form is
+NOT used — forms are plain uncontrolled inputs read via `FormData` plus a
+`useTransition` call to the Server Action, validated with Zod. dnd-kit for
+image reorder. Vitest + Playwright/axe. pnpm.
 
-The product domain must remain generic. Do not create separate database tables for properties, vehicles, watches, etc. New item types must not require a schema migration.
+## Server/client boundary
 
-Use dynamic ordered attributes for type-specific specifications.
+Server Components by default. `"use client"` only where there's real
+browser interactivity: mobile nav, search/filter inputs, gallery/lightbox,
+admin forms, the image manager (upload/reorder/DnD), delete-confirm dialog.
 
-## Visual references
+## Commands
 
-Before public UI implementation, inspect both files:
+```bash
+pnpm dev                 # dev server
+pnpm typecheck            # tsc --noEmit
+pnpm lint                 # eslint
+pnpm test                 # vitest (unit)
+pnpm e2e                  # playwright (spawns its own dev server on :4137)
+pnpm build                # production build
+pnpm db:start / db:stop   # local Supabase (Docker)
+pnpm db:reset             # reapply all migrations from scratch
+pnpm db:types             # regenerate src/lib/supabase/database.types.ts
+pnpm seed                 # insert dev-only demo products (titled "[DEV]")
+pnpm admin:create <email> <password>   # the only way to create an admin account
+```
 
-- `C:\Users\hduran\Downloads\altavistaReferenciaLanding.png`
-- `C:\Users\hduran\Downloads\altavistaReferenciaDetalles.png`
+`pnpm db:types` can leak Supabase CLI's stderr noise into the output file —
+always verify it starts with `export type Json` before trusting it.
 
-Copy them into `references/` once the project exists. Do not modify the originals.
+**Port note (this dev machine only):** ports 3000, 3010, and 3100 are
+silently captured by an unrelated Docker/WSL relay regardless of what's
+actually listening there. `playwright.config.ts` uses port 4137 for exactly
+this reason — don't move it back to a low port without checking
+`Get-NetTCPConnection -State Listen` first.
 
-Do not claim visual completion until browser screenshots have been compared against both references.
+## Testing
 
-## Visual direction
+No per-test database isolation exists (one shared local Supabase instance).
+`playwright.config.ts` deliberately runs `workers: 1` / `fullyParallel: false`
+— don't re-enable parallelism without adding real test-data isolation first.
 
-The public site must feel premium, modern, warm, spacious, Dominican, image-led, calm, trustworthy, and sophisticated.
+## Design tokens
 
-Avoid:
+Single source: `src/app/globals.css`. Don't hardcode hex values in
+components. `--color-sand` is decorative-only (borders, non-text accents) —
+it fails WCAG AA as text on ivory/bone. Use `--color-sand-text` for any
+overline/label text in that hue; axe caught this once already.
 
-- generic SaaS styling
-- generic marketplace styling
-- overcrowding
-- excessive decoration
-- fake luxury clichés
-- AI-slop visuals
-- meaningless UI
-- excessive glassmorphism
-- random gradients
-- dead controls
+## Documentation
 
-Whitespace is intentional. Spacing, hierarchy, typography, and image crops must be deliberate.
-
-## No-dead-control rule
-
-Every visible interactive element must function.
-
-Never ship:
-
-- `href="#"`
-- fake filters
-- fake search
-- fake dropdowns
-- fake cart/wishlist
-- fake map controls
-- buttons without handlers
-- controls for features that do not exist
-
-If functionality is not implemented, remove the control.
-
-## Stack direction
-
-Prefer the current stable versions of:
-
-- Next.js App Router
-- TypeScript strict
-- Tailwind CSS
-- pnpm
-- Supabase PostgreSQL
-- Supabase Auth
-- Cloudinary
-- Zod
-- React Hook Form where useful
-- dnd-kit for accessible image ordering
-- Vitest
-- Playwright
-
-Do not pin an older Next.js major without a verified reason. Follow current official Supabase SSR/Auth guidance during implementation.
-
-## Server/client rule
-
-Use Server Components by default. Use `"use client"` only for real browser interactivity such as nav state, galleries, filters, forms, DnD, dialogs, and upload progress.
-
-Database queries and privileged logic remain server-side.
-
-## Security invariant
-
-Admin security must have independent layers:
-
-1. route/middleware UX protection
-2. server-side `requireAdmin()`-style authorization
-3. PostgreSQL RLS as the database boundary
-
-Do not trust client roles, hidden URLs, or localStorage.
-
-Draft products must be inaccessible to anonymous users at database level.
-
-Never expose privileged secrets to browser code.
-
-## Image invariant
-
-Uploaded images must never stretch, distort, overflow, or cause avoidable layout shift.
-
-Support automatic responsive delivery. The admin must not manually create desktop/tablet/mobile versions.
-
-Use Cloudinary signed uploads and verify uploaded resources server-side before persistence.
-
-Image reorder must persist atomically.
-
-## Status policy
-
-- `DRAFT`: never public.
-- `AVAILABLE`: public and contactable.
-- `RESERVED`: public, visibly marked reserved, contact still available.
-- `SOLD`: excluded from default catalog, but direct product URL remains available and clearly marked sold.
-
-## Publication invariant
-
-Drafts may be incomplete. Publishing must fail server-side unless the minimum publication contract is satisfied, including valid basic data, valid price configuration, and at least one persisted cover image.
-
-Do not rely only on disabled frontend controls.
-
-## Code quality
-
-- TypeScript strict.
-- Avoid `any` and unsafe casts.
-- Do not suppress errors just to make CI green.
-- No business logic scattered through JSX.
-- No hard-coded product cards in production UI.
-- No client-side filtering of an unbounded full product table.
-- No destructive Git or remote operations without explicit permission.
-
-## QA invariant
-
-A passing build does not mean the feature is done.
-
-Before completion:
-
-- typecheck passes
-- lint passes
-- tests pass
-- production build passes
-- critical public/admin E2E flows pass
-- browser console is clean
-- responsive QA is done
-- accessibility is reviewed
-- visual screenshots are compared against references
-- image edge cases are tested
-- security is reviewed
-- obvious performance issues are fixed
-
-## Goal Mode continuity
-
-Keep progress in `docs/IMPLEMENTATION_STATE.md` and update it continuously.
-
-Do not put temporary progress logs in this file.
-
-<!-- BEGIN:nextjs-agent-rules -->
-
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+Temporary/progress state lives in `docs/IMPLEMENTATION_STATE.md`, not here.
+`docs/DESIGN_REFERENCE.md` records what was actually observed in the two
+reference screenshots under `references/`.
