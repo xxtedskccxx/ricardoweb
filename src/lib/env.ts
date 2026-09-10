@@ -1,10 +1,11 @@
+import "server-only";
 import { z } from "zod";
 
 /**
- * Server-only environment. Importing this file from a Client Component is a
- * build error by convention (never referenced from "use client" modules) —
- * it is the single place SUPABASE_SERVICE_ROLE_KEY and
- * CLOUDINARY_API_SECRET are read.
+ * Server-only environment — the `server-only` import makes this a build
+ * error if any Client Component ever imports it, not just a convention. It
+ * is the single place SUPABASE_SERVICE_ROLE_KEY and CLOUDINARY_API_SECRET
+ * are read.
  */
 const serverEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),

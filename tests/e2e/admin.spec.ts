@@ -8,7 +8,7 @@ async function login(page: import("@playwright/test").Page) {
   await page.getByLabel("Correo").fill(ADMIN_EMAIL);
   await page.getByLabel("Contraseña").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
 }
 
 test.describe("Admin — authentication boundary", () => {

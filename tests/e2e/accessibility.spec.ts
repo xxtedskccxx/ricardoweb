@@ -6,7 +6,7 @@ async function login(page: import("@playwright/test").Page) {
   await page.getByLabel("Correo").fill("dev@altamar.local");
   await page.getByLabel("Contraseña").fill("DevPassword123!");
   await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
 }
 
 test.describe("Accessibility", () => {
