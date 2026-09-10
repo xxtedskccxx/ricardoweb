@@ -26,9 +26,18 @@ export async function requestUploadSignature(productId: string) {
  * server re-fetches the resource and validates the REAL format/size/
  * dimensions before writing a row — the client's report is never trusted.
  */
+export interface PersistedImage {
+  id: string;
+  publicId: string;
+  width: number;
+  height: number;
+  position: number;
+  alt: string | null;
+}
+
 export async function persistUploadedImage(
   input: unknown,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<PersistedImage>> {
   const parsed = persistImageSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Solicitud de imagen inválida." };
@@ -63,7 +72,7 @@ export async function persistUploadedImage(
       bytes: verified.bytes,
       position: count ?? 0,
     })
-    .select("id")
+    .select("id, public_id, width, height, position, alt")
     .single();
 
   if (error) {
@@ -72,7 +81,17 @@ export async function persistUploadedImage(
   }
 
   revalidatePath(`/admin/productos/${parsed.data.productId}`);
-  return { success: true, data: { id: data.id } };
+  return {
+    success: true,
+    data: {
+      id: data.id,
+      publicId: data.public_id,
+      width: data.width,
+      height: data.height,
+      position: data.position,
+      alt: data.alt,
+    },
+  };
 }
 
 /** Atomic reorder (and, implicitly, cover selection — position 0 is the cover). */

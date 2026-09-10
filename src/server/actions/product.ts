@@ -9,8 +9,6 @@ import {
   publicationContractSchema,
   type ProductDraftInput,
 } from "@/schemas/product";
-import type { PostgrestError } from "@supabase/supabase-js";
-
 export interface ActionResult<T = undefined> {
   success: boolean;
   error?: string;
@@ -308,13 +306,4 @@ export async function deleteProduct(productId: string): Promise<ActionResult> {
   revalidatePublicCatalog();
   if (product?.slug) revalidatePath(`/producto/${product.slug}`);
   return { success: true };
-}
-
-export function isPostgrestError(error: unknown): error is PostgrestError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    "code" in error
-  );
 }
