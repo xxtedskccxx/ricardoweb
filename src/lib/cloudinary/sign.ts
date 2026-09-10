@@ -1,6 +1,7 @@
 import "server-only";
-import { createHash } from "node:crypto";
 import { getServerEnv } from "@/lib/env";
+import { buildProductFolder } from "./folder";
+import { signParams } from "./core";
 
 export interface UploadSignature {
   signature: string;
@@ -19,12 +20,10 @@ export interface UploadSignature {
 export function createUploadSignature(productId: string): UploadSignature {
   const env = getServerEnv();
   const timestamp = Math.round(Date.now() / 1000);
-  const folder = `${env.CLOUDINARY_UPLOAD_FOLDER}/${productId}`;
+  const folder = buildProductFolder(productId);
 
   const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
-  const signature = createHash("sha1")
-    .update(paramsToSign + env.CLOUDINARY_API_SECRET)
-    .digest("hex");
+  const signature = signParams(paramsToSign, env.CLOUDINARY_API_SECRET);
 
   return {
     signature,

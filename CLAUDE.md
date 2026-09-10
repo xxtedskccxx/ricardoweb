@@ -41,7 +41,10 @@ Never introduce any of those without an explicit new request.
 
 Cloudinary, signed direct-upload only. `CLOUDINARY_API_SECRET` and
 `SUPABASE_SERVICE_ROLE_KEY` are read only in server-only modules
-(`src/lib/env.ts`, `src/lib/cloudinary/*`) — never in a Client Component.
+(`src/lib/env.ts`, `src/lib/cloudinary/sign.ts`, `verify.ts`) — never in a
+Client Component. The Admin API resource-details endpoint authenticates
+with plain HTTP Basic Auth (`api_key:api_secret`) — it is NOT part of the
+Upload API's timestamp+signature family; don't sign it like an upload.
 After upload, the server re-fetches the resource from Cloudinary's Admin API
 and validates the *real* format/size/dimensions before writing a row
 (`src/lib/cloudinary/verify.ts`) — the browser's report is never trusted.
@@ -50,6 +53,15 @@ Card crops use `fill` (4:3, content-aware); detail/gallery uses `limit`
 `position = 0`; there is no separate `is_cover` flag. Reorder is atomic via
 the `reorder_product_images` Postgres RPC (two-pass negative-offset swap) to
 avoid partial-failure position collisions.
+
+**`server-only` and scripts**: the `server-only` package throws
+unconditionally under plain Node — not just inside Next's bundler — so a
+standalone script (`scripts/*.ts`, run via `tsx`) can never import
+`sign.ts`/`verify.ts`/`env.ts` even transitively. The pure signing/folder/
+verification math lives in `src/lib/cloudinary/core.ts` (no `server-only`,
+no env access) precisely so both the app and scripts share one
+implementation instead of duplicating it. If you need Cloudinary logic in a
+new script, add to `core.ts`, don't hand-roll it in the script.
 
 ## Stack
 

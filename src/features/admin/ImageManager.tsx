@@ -74,9 +74,36 @@ function uploadToCloudinary(
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(JSON.parse(xhr.responseText));
-      } else {
-        reject(new Error("Error al subir la imagen a Cloudinary."));
+        return;
       }
+
+      // Surface Cloudinary's real error instead of a generic message —
+      // the response body is `{"error":{"message":"...","http_code":N}}`.
+      let providerMessage: string | null = null;
+      try {
+        const body = JSON.parse(xhr.responseText) as {
+          error?: { message?: string };
+        };
+        providerMessage = body?.error?.message ?? null;
+      } catch {
+        // Non-JSON body (e.g. an HTML error page from a proxy) — fall through.
+      }
+
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[cloudinary upload]", {
+          status: xhr.status,
+          providerMessage,
+          responseText: xhr.responseText,
+        });
+      }
+
+      reject(
+        new Error(
+          providerMessage
+            ? `Cloudinary rechazó la imagen: ${providerMessage}`
+            : `Error al subir la imagen a Cloudinary (HTTP ${xhr.status}).`,
+        ),
+      );
     });
     xhr.addEventListener("error", () =>
       reject(new Error("Error de red al subir la imagen.")),

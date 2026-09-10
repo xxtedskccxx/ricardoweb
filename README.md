@@ -58,6 +58,12 @@ create an admin. `pnpm seed` inserts six demo products (titled `[DEV]`),
 covering every status (draft/available/reserved/sold) and price mode
 (fixed/negotiable/contact) for local testing.
 
+Once real Cloudinary credentials are set (see
+`docs/CLOUDINARY_SETUP.md`), run `pnpm seed:media` to attach the clearly-
+synthetic labeled reference images in `dev-assets/reference-products/` to
+the seeded products, so visual QA doesn't run against empty image
+containers.
+
 ### 5. Run it
 
 ```bash

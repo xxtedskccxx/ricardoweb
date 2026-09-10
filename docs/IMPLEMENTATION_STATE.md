@@ -43,13 +43,23 @@ end-to-end; remaining work is polish/verification, not missing features.
 ## Blockers
 
 - **No Cloudinary account configured** — `.env.local` has placeholder
-  Cloudinary values. Every code path (signed upload, server-side
-  verification, responsive delivery) is implemented and unit/E2E-tested
-  where possible without real credentials, but actual photo upload and
-  real-photo crop/CLS QA have not been exercised end-to-end. **Needs your
-  action**: create a Cloudinary account and provide
+  Cloudinary values (`altamar-dev-placeholder` / `placeholder` /
+  `placeholder`). This was diagnosed live: the upload request correctly
+  reaches `https://api.cloudinary.com/v1_1/altamar-dev-placeholder/image/upload`
+  and Cloudinary responds `401 Unknown API key placeholder` — proof the
+  signing/upload code path itself is correct, and the only missing piece is
+  a real account. See `docs/CLOUDINARY_SETUP.md` for exact steps. While
+  fixing the error-swallowing bug that hid this (see below), a second real
+  bug was found and fixed: the post-upload verification step
+  (`verifyAndPersistImageMetadata`) was authenticating Cloudinary's Admin
+  API with an invalid Basic-auth password (the upload signature instead of
+  the API secret) — latent until now since upload always failed first.
+  **Needs your action**: create a Cloudinary account and provide
   `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` /
-  `CLOUDINARY_API_SECRET`.
+  `CLOUDINARY_API_SECRET`, then run `pnpm seed:media` to attach the dev
+  reference images (`dev-assets/reference-products/`, clearly-synthetic
+  labeled placeholders, not real photography) to the seeded `[DEV]`
+  products for visual QA.
 - **Real contact details are placeholders** (`.env.local` has a fake
   WhatsApp number and a `.example` email). Needs real values before any
   real launch — the current ones are clearly fake but functionally wired.
@@ -66,12 +76,13 @@ end-to-end; remaining work is polish/verification, not missing features.
 |---|---|
 | Typecheck | clean |
 | Lint | clean |
-| Unit (Vitest) | 24/24 |
-| E2E (Playwright, desktop+mobile) | 44/44 |
+| Unit (Vitest) | 38/38 (14 new: Cloudinary signing/verification) |
+| E2E (Playwright, desktop+mobile) | 48/48 (2 new: image-upload error handling) |
 | Accessibility (axe, 4 pages) | 0 serious/critical |
 | Production build | clean |
 | RLS verified live | draft 404s for anon, admin sees drafts, unauthenticated write blocked |
 | Visual QA | 320/390/768/1440 checked live (no overflow); real-photo crop QA blocked on Cloudinary |
+| Cloudinary upload | live-reproduced end-to-end; fails at Cloudinary itself (`401 Unknown API key placeholder`) with real credentials, not a code bug — see Blockers |
 
 ## Next task
 
