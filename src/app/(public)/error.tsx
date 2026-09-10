@@ -16,7 +16,7 @@ export default function PublicError({
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
-      <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand)]">
+      <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand-text)]">
         Algo salió mal
       </p>
       <h1 className="font-display text-3xl text-[var(--color-ink)]">

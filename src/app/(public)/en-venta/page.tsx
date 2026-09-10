@@ -68,7 +68,7 @@ export default async function CatalogPage({ searchParams }: PageProps) {
   return (
     <div className="mx-auto max-w-[var(--container-max)] px-4 py-12 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-2 pb-8">
-        <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand)]">
+        <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand-text)]">
           Colección completa
         </p>
         <h1 className="font-display text-3xl text-[var(--color-ink)]">

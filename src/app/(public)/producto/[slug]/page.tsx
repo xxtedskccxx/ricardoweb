@@ -100,7 +100,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
   return (
     <div className="mx-auto max-w-[var(--container-max)] px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pb-12">
       {structuredData && (
-        // eslint-disable-next-line react/no-danger -- static JSON-LD we construct ourselves, no user HTML.
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

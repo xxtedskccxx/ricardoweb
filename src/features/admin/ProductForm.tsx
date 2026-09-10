@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { cloneElement, useId, useState, useTransition } from "react";
 import { createDraftProduct, updateProduct } from "@/server/actions/product";
 import { AttributeEditor, type AttributeItem } from "./AttributeEditor";
 import { Button } from "@/components/ui/Button";
@@ -39,9 +39,7 @@ interface ProductFormProps {
 
 export function ProductForm({ productId, initial }: ProductFormProps) {
   const router = useRouter();
-  const [values, setValues] = useState<ProductFormValues>(
-    initial ?? EMPTY_VALUES,
-  );
+  const values = initial ?? EMPTY_VALUES;
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
@@ -242,14 +240,15 @@ function Field({
 }: {
   label: string;
   error?: string;
-  children: React.ReactNode;
+  children: React.ReactElement<{ id?: string }>;
 }) {
+  const id = useId();
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-sm font-medium text-[var(--color-ink)]">
+      <label htmlFor={id} className="text-sm font-medium text-[var(--color-ink)]">
         {label}
-      </span>
-      {children}
+      </label>
+      {cloneElement(children, { id })}
       {error && <span className="text-xs text-[var(--color-danger)]">{error}</span>}
     </div>
   );

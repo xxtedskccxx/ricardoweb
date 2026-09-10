@@ -17,7 +17,7 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-[var(--color-bone)] px-4">
       <div className="w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-[var(--shadow-md)]">
-        <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand)]">
+        <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand-text)]">
           {siteConfig.name}
         </p>
         <h1 className="mt-1 font-display text-2xl text-[var(--color-ink)]">

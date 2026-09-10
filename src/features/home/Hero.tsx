@@ -27,7 +27,7 @@ export function Hero() {
 
         <div className="relative mx-auto flex h-full max-w-[var(--container-max)] items-center px-4 sm:px-6 lg:px-8">
           <div className="max-w-xl">
-            <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand)]">
+            <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand-text)]">
               {siteConfig.country}
             </p>
             <h1 className="mt-3 font-display text-4xl leading-[1.1] text-[var(--color-ink)] sm:text-5xl">

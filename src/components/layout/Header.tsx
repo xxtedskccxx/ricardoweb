@@ -20,7 +20,7 @@ export function Header() {
             <span className="font-display text-lg font-medium text-[var(--color-ink)]">
               {siteConfig.name}
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-[var(--color-sand)]">
+            <span className="text-[10px] uppercase tracking-wider text-[var(--color-sand-text)]">
               {siteConfig.tagline}
             </span>
           </span>

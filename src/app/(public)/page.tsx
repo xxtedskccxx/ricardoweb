@@ -13,7 +13,7 @@ export default async function HomePage() {
 
       <section className="mx-auto max-w-[var(--container-max)] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         <div className="flex flex-col gap-2 pb-10">
-          <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand)]">
+          <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand-text)]">
             Mi colección
           </p>
           <h2 className="font-display text-3xl text-[var(--color-ink)]">

@@ -14,12 +14,17 @@
   --color-olive: #24402c;
   --color-olive-strong: #1a3020;
   --color-sand: #b08a4e;
+  /* Darker than --color-sand specifically for text on ivory/bone —
+     --color-sand itself fails WCAG AA (3:1) at small overline sizes;
+     this variant clears 4.5:1. Use --color-sand only for non-text
+     decoration (borders, small accent fills). */
+  --color-sand-text: #7a5a2a;
   --color-sand-soft: #e7ddc8;
   --color-border: rgba(28, 42, 36, 0.1);
   --color-border-strong: rgba(28, 42, 36, 0.18);
   --color-available: #2f6b45;
   --color-available-bg: #e7f1e8;
-  --color-reserved: #9a6a1f;
+  --color-reserved: #7a5217;
   --color-reserved-bg: #f5ecda;
   --color-sold: #6b6862;
   --color-sold-bg: #eeeceb;
