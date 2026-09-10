@@ -3,38 +3,43 @@ import type { ImageLoaderProps } from "next/image";
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
 /**
- * Custom next/image loader: rewrites any Cloudinary-hosted image to a
+ * Custom next/image loader: rewrites a Cloudinary public_id to a
  * device-aware, format-aware derivative. `f_auto,q_auto,dpr_auto` lets
- * Cloudinary pick AVIF/WebP and the right pixel density per client;
- * `c_limit` never crops (used for detail/gallery views). Card crops apply
- * `c_fill,g_auto` explicitly at the call site via `transform`.
+ * Cloudinary pick AVIF/WebP and the right pixel density per client.
+ *
+ * `src` carries its crop intent as a prefix so next/image's own
+ * width/quality selection still drives the URL:
+ *   "limit:<public_id>" — never crops (product detail/gallery).
+ *   "fill:<public_id>"  — fixed-ratio content-aware crop (cards).
+ * No prefix defaults to "limit" (the safer, non-destructive behavior).
  */
-export function cloudinaryLoader({ src, width, quality }: ImageLoaderProps): string {
-  // Already a fully-qualified Cloudinary delivery URL (rare, but pass through).
+export function cloudinaryLoader({
+  src,
+  width,
+  quality,
+}: ImageLoaderProps): string {
   if (src.startsWith("http://") || src.startsWith("https://")) {
     return src;
   }
 
+  const [mode, publicId] = src.includes(":")
+    ? (src.split(/:(.+)/) as [string, string])
+    : ["limit", src];
+
   const q = quality ? `q_${quality}` : "q_auto";
-  const transforms = ["f_auto", q, "dpr_auto", `w_${width}`, "c_limit"].join(
-    ",",
-  );
+  const crop = mode === "fill" ? "c_fill,g_auto" : "c_limit";
+  const transforms = ["f_auto", q, "dpr_auto", `w_${width}`, crop].join(",");
 
-  // `src` is expected to be a bare Cloudinary public_id (no extension).
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${src}`;
-}
-
-/** Builds a card-crop URL (fixed 4:3, content-aware gravity) for a given public_id. */
-export function cloudinaryCardUrl(publicId: string, width: number): string {
-  const height = Math.round((width * 3) / 4);
-  const transforms = [
-    "f_auto",
-    "q_auto",
-    "dpr_auto",
-    `w_${width}`,
-    `h_${height}`,
-    "c_fill",
-    "g_auto",
-  ].join(",");
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${publicId}`;
 }
+
+/** Wraps a bare public_id for the fixed-ratio, content-aware card crop. */
+export function cardImageSrc(publicId: string): string {
+  return `fill:${publicId}`;
+}
+
+/** Wraps a bare public_id for the non-destructive detail/gallery crop. */
+export function detailImageSrc(publicId: string): string {
+  return `limit:${publicId}`;
+}
+

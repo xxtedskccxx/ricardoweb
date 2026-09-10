@@ -46,6 +46,7 @@
     "@playwright/test": "^1",
     "supabase": "^2",
     "tsx": "^4",
+    "dotenv": "^17",
     "@axe-core/playwright": "^4"
   },
   "packageManager": "pnpm@11.19.0"
