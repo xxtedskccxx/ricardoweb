@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/*
+  Design tokens derived from the ALTAMAR visual references
+  (landing + product detail screenshots). Single source of truth —
+  every component consumes these custom properties, never raw hex values.
+*/
+:root {
+  --color-ivory: #faf8f4;
+  --color-bone: #f2eee7;
+  --color-surface: #ffffff;
+  --color-ink: #1c2a24;
+  --color-ink-muted: #5b665f;
+  --color-olive: #24402c;
+  --color-olive-strong: #1a3020;
+  --color-sand: #b08a4e;
+  --color-sand-soft: #e7ddc8;
+  --color-border: rgba(28, 42, 36, 0.1);
+  --color-border-strong: rgba(28, 42, 36, 0.18);
+  --color-available: #2f6b45;
+  --color-available-bg: #e7f1e8;
+  --color-reserved: #9a6a1f;
+  --color-reserved-bg: #f5ecda;
+  --color-sold: #6b6862;
+  --color-sold-bg: #eeeceb;
+  --color-danger: #a13b32;
+  --color-danger-bg: #f8ebe9;
+
+  --shadow-sm: 0 1px 2px rgba(28, 42, 36, 0.06);
+  --shadow-md: 0 8px 24px rgba(28, 42, 36, 0.08);
+
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  --container-max: 1280px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-inter), -apple-system, "Segoe UI", sans-serif;
+}
+
+@theme inline {
+  --color-ivory: var(--color-ivory);
+  --color-bone: var(--color-bone);
+  --color-surface: var(--color-surface);
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-olive: var(--color-olive);
+  --color-olive-strong: var(--color-olive-strong);
+  --color-sand: var(--color-sand);
+  --color-sand-soft: var(--color-sand-soft);
+  --color-available: var(--color-available);
+  --color-available-bg: var(--color-available-bg);
+  --color-reserved: var(--color-reserved);
+  --color-reserved-bg: var(--color-reserved-bg);
+  --color-sold: var(--color-sold);
+  --color-sold-bg: var(--color-sold-bg);
+  --color-danger: var(--color-danger);
+  --color-danger-bg: var(--color-danger-bg);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-ivory);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-olive);
+  color: var(--color-ivory);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-olive);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Utility: prevent any container from ever causing page-level horizontal scroll */
+.no-overflow-guard {
+  overflow-x: clip;
+}
