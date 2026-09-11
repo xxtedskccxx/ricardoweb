@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { cardImageSrc } from "@/lib/cloudinary/loader";
+import { cardImageSrc } from "@/lib/cloudinary/image-src";
 
 interface CardImageProps {
   publicId: string;

@@ -1,3 +1,5 @@
+"use client";
+
 import type { ImageLoaderProps } from "next/image";
 
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
@@ -33,13 +35,6 @@ export function cloudinaryLoader({
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms}/${publicId}`;
 }
 
-/** Wraps a bare public_id for the fixed-ratio, content-aware card crop. */
-export function cardImageSrc(publicId: string): string {
-  return `fill:${publicId}`;
-}
-
-/** Wraps a bare public_id for the non-destructive detail/gallery crop. */
-export function detailImageSrc(publicId: string): string {
-  return `limit:${publicId}`;
-}
+// next/image's `images.loaderFile` requires a default export.
+export default cloudinaryLoader;
 

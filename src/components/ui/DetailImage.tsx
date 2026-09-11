@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { detailImageSrc } from "@/lib/cloudinary/loader";
+import { detailImageSrc } from "@/lib/cloudinary/image-src";
 
 interface DetailImageProps {
   publicId: string;

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { detailImageSrc } from "@/lib/cloudinary/loader";
+import { detailImageSrc } from "@/lib/cloudinary/image-src";
 import type { ProductImageRow } from "@/server/queries";
 
 interface GalleryProps {
@@ -115,6 +115,7 @@ export function Gallery({ images, productTitle }: GalleryProps) {
               key={image.id}
               role="tab"
               aria-selected={index === activeIndex}
+              aria-label={`Ver foto ${index + 1} de ${images.length}`}
               onClick={() => goTo(index)}
               className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-[var(--radius-md)] border-2 ${
                 index === activeIndex

@@ -26,7 +26,7 @@ import {
   removeProductImage,
   updateImageAlt,
 } from "@/server/actions/image";
-import { detailImageSrc } from "@/lib/cloudinary/loader";
+import { detailImageSrc } from "@/lib/cloudinary/image-src";
 import { MAX_IMAGE_BYTES, LOW_RESOLUTION_WARNING_WIDTH } from "@/schemas/image";
 
 export interface ManagedImage {

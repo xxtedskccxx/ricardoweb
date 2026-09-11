@@ -42,33 +42,49 @@ end-to-end; remaining work is polish/verification, not missing features.
 
 ## Blockers
 
-- **No Cloudinary account configured** — `.env.local` has placeholder
-  Cloudinary values (`altamar-dev-placeholder` / `placeholder` /
-  `placeholder`). This was diagnosed live: the upload request correctly
-  reaches `https://api.cloudinary.com/v1_1/altamar-dev-placeholder/image/upload`
-  and Cloudinary responds `401 Unknown API key placeholder` — proof the
-  signing/upload code path itself is correct, and the only missing piece is
-  a real account. See `docs/CLOUDINARY_SETUP.md` for exact steps. While
-  fixing the error-swallowing bug that hid this (see below), a second real
-  bug was found and fixed: the post-upload verification step
-  (`verifyAndPersistImageMetadata`) was authenticating Cloudinary's Admin
-  API with an invalid Basic-auth password (the upload signature instead of
-  the API secret) — latent until now since upload always failed first.
-  **Needs your action**: create a Cloudinary account and provide
-  `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` /
-  `CLOUDINARY_API_SECRET`, then run `pnpm seed:media` to attach the dev
-  reference images (`dev-assets/reference-products/`, clearly-synthetic
-  labeled placeholders, not real photography) to the seeded `[DEV]`
-  products for visual QA.
 - **Real contact details are placeholders** (`.env.local` has a fake
   WhatsApp number and a `.example` email). Needs real values before any
   real launch — the current ones are clearly fake but functionally wired.
-- **Browser tool in this environment can't drive a native file picker**, so
-  the image-upload UI itself was verified by code review + unit-level
-  reasoning, not a live upload — this is a tooling limitation, not a
-  skipped requirement. Once Cloudinary credentials exist, upload one real
-  image through `/admin/productos/[id]` manually to confirm the full round
-  trip.
+
+## Resolved this pass — Cloudinary real-credential verification
+
+A real Cloudinary account (`vask4xsm`) was configured in `.env.local` and
+the full upload pipeline was verified live end-to-end — signed upload,
+server-side Admin API re-verification, DB persistence, and rendering —
+not just reproduced as a diagnosed failure. This surfaced and fixed three
+real bugs that had never been exercised before (upload always failed on
+placeholder credentials, so nothing downstream of it had ever actually run
+against real data):
+
+1. **Wrong Admin API auth** (found in the prior pass) — confirmed fixed:
+   `verifyCloudinaryResource` now uses plain Basic `api_key:api_secret`.
+2. **`next.config.ts`'s custom image loader had no default export.**
+   Next.js's `images.loaderFile` contract requires one; this was invisible
+   until a real image actually needed rendering (`src/lib/cloudinary/loader.ts`).
+   Fixed by adding `export default cloudinaryLoader` and the required
+   `"use client"` directive.
+3. **That `"use client"` directive then broke Server Component callers.**
+   `cardImageSrc`/`detailImageSrc` were in the same file, so tainting it
+   client-only broke `CardImage.tsx` (a Server Component) at runtime with
+   "Attempted to call cardImageSrc() from the server". Fixed by moving
+   those two pure string builders into a new `src/lib/cloudinary/image-src.ts`
+   (no `"use client"`), leaving `loader.ts` as client-only and
+   default-exported. Four importers updated.
+4. **Gallery thumbnail buttons had no accessible name** — axe caught this
+   only once a real product (Villa Frente al Mar, via `pnpm seed:media`)
+   actually had 2+ images to populate the thumbnail strip; no seed data
+   had ever done that before. Fixed with an `aria-label` on each
+   `role="tab"` thumbnail in `src/features/products/Gallery.tsx`.
+
+Live-verified via a real signed upload through the actual admin UI
+(`/admin/productos/[id]`), confirmed by inspecting the rendered `<img>`'s
+`src` (`res.cloudinary.com/vask4xsm/...`) and `naturalWidth`, then cleaned
+up. `tests/e2e/admin-images.spec.ts` was rewritten to match: a real-success
+test (uploads, verifies, renders as cover) replaces the old
+"unconfigured Cloudinary fails" test (no longer true now that real
+credentials exist), and a new test uses the previously-unused
+`tests/fixtures/invalid-file.png` to exercise Cloudinary's *real* rejection
+of a non-image payload — a check that was only simulable before.
 
 ## Test status
 
@@ -76,17 +92,15 @@ end-to-end; remaining work is polish/verification, not missing features.
 |---|---|
 | Typecheck | clean |
 | Lint | clean |
-| Unit (Vitest) | 38/38 (14 new: Cloudinary signing/verification) |
-| E2E (Playwright, desktop+mobile) | 48/48 (2 new: image-upload error handling) |
-| Accessibility (axe, 4 pages) | 0 serious/critical |
+| Unit (Vitest) | 38/38 |
+| E2E (Playwright, desktop+mobile) | 50/50 (real-upload success test replaces the old unconfigured-Cloudinary test; new invalid-file-rejection test) |
+| Accessibility (axe, 4 pages) | 0 serious/critical (after fixing the gallery thumbnail aria-label bug real images exposed) |
 | Production build | clean |
 | RLS verified live | draft 404s for anon, admin sees drafts, unauthenticated write blocked |
-| Visual QA | 320/390/768/1440 checked live (no overflow); real-photo crop QA blocked on Cloudinary |
-| Cloudinary upload | live-reproduced end-to-end; fails at Cloudinary itself (`401 Unknown API key placeholder`) with real credentials, not a code bug — see Blockers |
+| Visual QA | 320/390/768/1440 checked live (no overflow) |
+| Cloudinary upload | **verified live with real credentials** — real signed upload, real Admin API verification, real DB row, real render confirmed in-browser |
 
 ## Next task
 
-Final security/performance self-review pass (see the completion report),
-then hand off — real Cloudinary credentials and real contact info are the
-two things that need your input before this could go live. No deploy, push,
-or paid resource has been created.
+Real contact info is the one thing left needing your input before this
+could go live. No deploy, push, or paid resource has been created.

@@ -10,7 +10,7 @@ async function login(page: import("@playwright/test").Page) {
 }
 
 test.describe("Admin — image upload error handling", () => {
-  test("a valid image attempt with unconfigured Cloudinary fails with a real provider message, not a crash, and leaves no broken row", async ({
+  test("a real image uploads successfully, verifies, and persists as the cover", async ({
     page,
   }) => {
     await login(page);
@@ -28,14 +28,46 @@ test.describe("Admin — image upload error handling", () => {
       path.join(__dirname, "..", "fixtures", "test-upload.jpg"),
     );
 
-    // The upload item appears with a real (non-generic) provider error —
-    // this is the exact regression this suite guards against: it must
-    // name what Cloudinary actually said, not a generic failure string.
+    // Real signed upload to Cloudinary + server-side Admin API
+    // re-verification must succeed: the empty-gallery placeholder is
+    // replaced by a real persisted cover image, with no provider error.
+    await expect(
+      page.getByText("Aún no hay imágenes. La portada será la primera que subas."),
+    ).toBeHidden({ timeout: 20_000 });
+    await expect(page.getByText(/Cloudinary rechaz/)).not.toBeVisible();
+    await expect(page.getByText("Portada")).toBeVisible();
+
+    const img = page.locator('img[src*="res.cloudinary.com"]').first();
+    await expect(img).toBeVisible();
+
+    // Clean up the temporary product.
+    await page.getByRole("button", { name: "Eliminar producto" }).click();
+    await page.getByRole("button", { name: "Sí, eliminar" }).click();
+    await expect(page).toHaveURL(/\/admin\/productos$/);
+  });
+
+  test("a file that isn't really an image is rejected with Cloudinary's real error, not a crash, and leaves no broken row", async ({
+    page,
+  }) => {
+    await login(page);
+    await page.goto("/admin/productos/nuevo");
+    await page.getByLabel("Título").fill("Producto E2E Archivo Invalido");
+    await page.getByLabel("Tipo").fill("Artículo");
+    await page.getByLabel("Precio").fill("50");
+    await page.getByRole("button", { name: "Crear borrador" }).click();
+    await expect(page).toHaveURL(/\/admin\/productos\/[0-9a-f-]+$/, {
+      timeout: 15_000,
+    });
+
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(
+      path.join(__dirname, "..", "fixtures", "invalid-file.png"),
+    );
+
+    // Cloudinary itself rejects the non-image payload — the client must
+    // surface that real provider error, not a generic failure string.
     const errorText = page.getByText(/Cloudinary rechaz/);
     await expect(errorText).toBeVisible({ timeout: 15_000 });
-
-    // No console crash / unhandled exception should have occurred, and no
-    // image row should have been persisted for a failed upload.
     await expect(
       page.getByText("Aún no hay imágenes. La portada será la primera que subas."),
     ).toBeVisible();
