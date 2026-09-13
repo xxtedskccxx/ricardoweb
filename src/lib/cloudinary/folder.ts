@@ -1,4 +1,4 @@
-import { getServerEnv } from "@/lib/env";
+import { getCloudinaryEnv } from "@/lib/env";
 import { buildProductFolderPath } from "./core";
 
 /**
@@ -9,6 +9,6 @@ import { buildProductFolderPath } from "./core";
  * reuse it too; this wrapper only supplies the real env value.
  */
 export function buildProductFolder(productId: string): string {
-  const env = getServerEnv();
+  const env = getCloudinaryEnv();
   return buildProductFolderPath(env.CLOUDINARY_UPLOAD_FOLDER, productId);
 }

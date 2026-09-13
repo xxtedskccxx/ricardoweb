@@ -24,12 +24,12 @@ Never introduce any of those without an explicit new request.
   `src/server/actions/product.ts` validates the full contract (title, slug,
   type, description ≥20 chars, valid price config, ≥1 image, cover image)
   server-side. A disabled frontend button is never the only gate.
-- **Drafts are invisible publicly at the database level** via RLS
-  (`status <> 'DRAFT'` policy on `products`/`product_images`), not just an
-  application filter.
-- **Three independent admin security layers**: middleware/proxy redirect (UX
+- **Drafts are invisible publicly** through every public SQL query
+  (`status <> 'DRAFT'`), not just an application filter.
+- **Two independent admin security layers**: middleware/proxy redirect (UX
   only) → `requireAdmin()` in `src/server/auth.ts` (the real boundary,
-  validates the JWT + `admins` allow-list membership) → RLS. There is no
+  validates the signed, httpOnly session + `admins` allow-list membership).
+  There is no
   public admin registration route anywhere; accounts are created with
   `pnpm admin:create <email> <password>`.
 - **Status policy**: DRAFT never public · AVAILABLE public+contactable ·
@@ -39,8 +39,7 @@ Never introduce any of those without an explicit new request.
 
 ## Image pipeline
 
-Cloudinary, signed direct-upload only. `CLOUDINARY_API_SECRET` and
-`SUPABASE_SERVICE_ROLE_KEY` are read only in server-only modules
+Cloudinary, signed direct-upload only. `CLOUDINARY_API_SECRET` is read only in server-only modules
 (`src/lib/env.ts`, `src/lib/cloudinary/sign.ts`, `verify.ts`) — never in a
 Client Component. The Admin API resource-details endpoint authenticates
 with plain HTTP Basic Auth (`api_key:api_secret`) — it is NOT part of the
@@ -51,7 +50,7 @@ and validates the *real* format/size/dimensions before writing a row
 Card crops use `fill` (4:3, content-aware); detail/gallery uses `limit`
 (never crops) — see `src/lib/cloudinary/loader.ts`. Cover image = the row at
 `position = 0`; there is no separate `is_cover` flag. Reorder is atomic via
-the `reorder_product_images` Postgres RPC (two-pass negative-offset swap) to
+a two-statement Neon Postgres transaction (two-pass negative-offset swap) to
 avoid partial-failure position collisions.
 
 **`server-only` and scripts**: the `server-only` package throws
@@ -66,7 +65,7 @@ new script, add to `core.ts`, don't hand-roll it in the script.
 ## Stack
 
 Next.js 16 (App Router, TypeScript strict, `noUncheckedIndexedAccess`),
-Tailwind v4, Supabase Postgres/Auth, Cloudinary, Zod, React Hook Form is
+Tailwind v4, Neon Postgres, signed cookie auth, Cloudinary, Zod, React Hook Form is
 NOT used — forms are plain uncontrolled inputs read via `FormData` plus a
 `useTransition` call to the Server Action, validated with Zod. dnd-kit for
 image reorder. Vitest + Playwright/axe. pnpm.
@@ -86,15 +85,10 @@ pnpm lint                 # eslint
 pnpm test                 # vitest (unit)
 pnpm e2e                  # playwright (spawns its own dev server on :4137)
 pnpm build                # production build
-pnpm db:start / db:stop   # local Supabase (Docker)
-pnpm db:reset             # reapply all migrations from scratch
-pnpm db:types             # regenerate src/lib/supabase/database.types.ts
+pnpm db:migrate           # apply db/migrations to DATABASE_URL
 pnpm seed                 # insert dev-only demo products (titled "[DEV]")
 pnpm admin:create <email> <password>   # the only way to create an admin account
 ```
-
-`pnpm db:types` can leak Supabase CLI's stderr noise into the output file —
-always verify it starts with `export type Json` before trusting it.
 
 **Port note (this dev machine only):** ports 3000, 3010, and 3100 are
 silently captured by an unrelated Docker/WSL relay regardless of what's
@@ -104,7 +98,8 @@ this reason — don't move it back to a low port without checking
 
 ## Testing
 
-No per-test database isolation exists (one shared local Supabase instance).
+No per-test database isolation exists; use a separate Neon development branch
+for E2E data.
 `playwright.config.ts` deliberately runs `workers: 1` / `fullyParallel: false`
 — don't re-enable parallelism without adding real test-data isolation first.
 

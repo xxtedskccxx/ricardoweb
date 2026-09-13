@@ -4,6 +4,8 @@ import { LinkButton } from "@/components/ui/Button";
 import { getHomepageProducts } from "@/server/queries";
 import { siteConfig } from "@/config/site";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const products = await getHomepageProducts(6);
 

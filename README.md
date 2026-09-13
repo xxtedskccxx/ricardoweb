@@ -7,8 +7,8 @@ conversion (WhatsApp, phone, email).
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · Supabase
-(Postgres + Auth) · Cloudinary · Zod · dnd-kit · Vitest · Playwright + axe ·
+Next.js 16 (App Router) · TypeScript (strict) · Neon Postgres · cookie-based
+admin auth · Cloudinary · Zod · dnd-kit · Vitest · Playwright + axe ·
 pnpm
 
 ## Local setup
@@ -17,20 +17,21 @@ pnpm
 
 - Node 22+
 - pnpm (`corepack enable` if you don't have it)
-- Docker Desktop (for local Supabase)
+- A free Neon account (or any PostgreSQL 15+ database)
 
 ### 1. Install and start the database
 
 ```bash
 pnpm install
-pnpm db:start
 ```
 
-`pnpm db:start` prints local API URL/keys. Copy `.env.example` to
-`.env.local` and fill in the `NEXT_PUBLIC_SUPABASE_*` /
-`SUPABASE_SERVICE_ROLE_KEY` values from that output (they're the same
-well-known local-dev keys every `supabase start` prints — not secret, never
-use them outside local development).
+Copy `.env.example` to `.env.local`, paste your Neon connection string in
+`DATABASE_URL`, and generate a random `AUTH_SECRET` with at least 32
+characters. Then run `pnpm db:migrate` to create the tables:
+
+```bash
+pnpm db:migrate
+```
 
 ### 2. Cloudinary (optional for browsing, required for image upload)
 
@@ -83,8 +84,8 @@ pnpm e2e          # E2E + accessibility (Playwright + axe)
 pnpm build        # production build
 ```
 
-`pnpm e2e` starts its own dev server on port 4137 and runs against the same
-local Supabase instance `pnpm db:start` set up — no separate test database.
+`pnpm e2e` starts its own dev server on port 4137 and uses the database in
+`DATABASE_URL`. Use a separate Neon development branch for test data.
 
 ## Project structure
 
@@ -101,11 +102,11 @@ src/
   features/home/          Hero
   config/                 site.ts (branding/contact), product-types.ts
   lib/                    slug, money, whatsapp, normalize, env,
-                          supabase/*, cloudinary/*
+                          db.ts, auth/*, cloudinary/*
   schemas/                Zod (product.ts, image.ts)
   server/                 auth.ts, queries.ts (public reads),
                           actions/ (Server Actions — the only writers)
-supabase/migrations/       versioned SQL (schema, RLS, reorder RPC)
+db/migrations/             versioned Neon/Postgres SQL
 scripts/                   seed.ts, create-admin.ts (dev-only)
 tests/unit/                Vitest
 tests/e2e/                 Playwright + axe
@@ -124,6 +125,6 @@ duplicate/skipped positions.
 
 ## Deployment (not yet done — see docs/IMPLEMENTATION_STATE.md)
 
-Intended target: Vercel (Next.js) + a hosted Supabase project + Cloudinary,
-with separate dev/prod Supabase projects and Cloudinary folders. Nothing has
-been deployed; this repository has never been pushed to a remote.
+Intended target: Vercel (Next.js) + Neon Postgres + Cloudinary. Configure the
+same variables from `.env.example` in Vercel; no database credentials are
+committed to this repository.

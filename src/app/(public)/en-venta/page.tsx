@@ -10,6 +10,8 @@ import {
 import { productFilterSchema } from "@/schemas/product";
 import { absoluteUrl, serializeJsonLd } from "@/lib/seo";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }

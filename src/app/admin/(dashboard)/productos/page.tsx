@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAdminProducts } from "@/server/queries";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatPrice } from "@/lib/money";
 import { AdminProductFilters } from "./AdminProductFilters";
@@ -24,24 +24,16 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
   const { q, estado, page: pageParam } = await searchParams;
   const status = parseStatus(estado);
   const page = Math.max(1, Number(pageParam) || 1);
-  const supabase = await createSupabaseServerClient();
-
-  let query = supabase
-    .from("products")
-    .select(
-      "id, title, type, price, currency, price_mode, status, updated_at, product_images(public_id, position)",
-      { count: "exact" },
-    )
-    .order("updated_at", { ascending: false });
-
-  if (status) query = query.eq("status", status);
-  if (q) query = query.ilike("title", `%${q}%`);
-
-  const from = (page - 1) * PAGE_SIZE;
-  query = query.range(from, from + PAGE_SIZE - 1);
-
-  const { data, count, error } = await query;
-  const products = data ?? [];
+  let products: Awaited<ReturnType<typeof getAdminProducts>>["rows"] = [];
+  let count = 0;
+  let error = false;
+  try {
+    const result = await getAdminProducts({ q, status, page, pageSize: PAGE_SIZE });
+    products = result.rows;
+    count = result.count;
+  } catch {
+    error = true;
+  }
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
   return (

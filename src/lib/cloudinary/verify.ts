@@ -1,5 +1,5 @@
 import "server-only";
-import { getServerEnv } from "@/lib/env";
+import { getCloudinaryEnv } from "@/lib/env";
 import {
   verifyCloudinaryResource,
   destroyCloudinaryResource as destroyCloudinaryResourceCore,
@@ -17,7 +17,7 @@ function devLog(event: Record<string, unknown>) {
 }
 
 function credsFromEnv() {
-  const env = getServerEnv();
+  const env = getCloudinaryEnv();
   return {
     cloudName: env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
     apiKey: env.CLOUDINARY_API_KEY,

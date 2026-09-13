@@ -1,58 +1,37 @@
-/**
- * One-off admin bootstrap for LOCAL development only. There is no public
- * registration route anywhere in this app by design — the only way to
- * create an authorized owner account is a script like this one, run
- * directly against Supabase with the service-role key.
- *
- * Usage: pnpm tsx scripts/create-admin.ts <email> <password>
+/** Create or replace an admin account in a Neon database.
+ * Usage: pnpm admin:create <email> <password>
  */
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
 import { resolve } from "node:path";
+import { hashPassword } from "../src/lib/auth/password";
 
-config({ path: resolve(__dirname, "../.env.local") });
-
-const [, , email, password] = process.argv;
-
+config({ path: resolve(process.cwd(), ".env.local") });
+const [, , rawEmail, password] = process.argv;
+const email = rawEmail?.trim().toLowerCase();
 if (!email || !password) {
-  console.error("Usage: pnpm tsx scripts/create-admin.ts <email> <password>");
+  console.error("Uso: pnpm admin:create <correo> <contraseña>");
   process.exit(1);
 }
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!url || !serviceKey) {
-  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
+if (password.length < 12) {
+  console.error("La contraseña debe tener al menos 12 caracteres.");
   process.exit(1);
 }
-
-const supabase = createClient(url, serviceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error("Falta DATABASE_URL en .env.local");
+  process.exit(1);
+}
 
 async function main() {
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-
-  if (error || !data.user) {
-    console.error("Failed to create user:", error?.message);
-    process.exit(1);
-  }
-
-  const { error: adminError } = await supabase
-    .from("admins")
-    .insert({ user_id: data.user.id });
-
-  if (adminError) {
-    console.error("User created but failed to grant admin:", adminError.message);
-    process.exit(1);
-  }
-
-  console.log(`Admin account ready: ${email}`);
+  const sql = neon(connectionString as string);
+  const passwordHash = await hashPassword(password as string);
+  await sql`INSERT INTO admins (email, password_hash) VALUES (${email}, ${passwordHash})
+    ON CONFLICT (email) DO UPDATE SET password_hash = excluded.password_hash`;
+  console.log(`Administrador listo: ${email}`);
 }
 
-main();
+main().catch((error: unknown) => {
+  console.error("No se pudo crear el administrador:", error);
+  process.exit(1);
+});

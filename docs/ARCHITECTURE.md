@@ -8,8 +8,8 @@ Use current stable releases at implementation time.
 - TypeScript strict
 - Tailwind CSS
 - pnpm
-- Supabase PostgreSQL
-- Supabase Auth
+- Neon PostgreSQL (serverless HTTP driver)
+- Signed httpOnly cookie auth
 - Cloudinary
 - Zod
 - React Hook Form where beneficial
@@ -50,13 +50,13 @@ src/
     actions/
     auth/
   lib/
-    supabase/
+    db.ts
+    auth/
     cloudinary/
   schemas/
   config/
-supabase/
+db/
   migrations/
-  seed.sql
 references/
 docs/
 tests/
@@ -88,7 +88,9 @@ Database reads and privileged mutations remain server-side.
 
 ### `admins`
 
-- `user_id uuid primary key references auth.users(id)`
+- `id uuid primary key`
+- `email text unique not null`
+- `password_hash text not null` (scrypt)
 - `created_at timestamptz`
 
 ### `products`

@@ -16,7 +16,7 @@
  *
  * Usage: pnpm seed:media
  */
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { readFile } from "node:fs/promises";
@@ -29,16 +29,14 @@ import {
 
 config({ path: resolve(__dirname, "../.env.local") });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const databaseUrl = process.env.DATABASE_URL;
 const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const apiKey = process.env.CLOUDINARY_API_KEY;
 const apiSecret = process.env.CLOUDINARY_API_SECRET;
 const uploadFolder = process.env.CLOUDINARY_UPLOAD_FOLDER;
 
 const missing = [
-  ["NEXT_PUBLIC_SUPABASE_URL", supabaseUrl],
-  ["SUPABASE_SERVICE_ROLE_KEY", serviceKey],
+  ["DATABASE_URL", databaseUrl],
   ["NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", cloudName],
   ["CLOUDINARY_API_KEY", apiKey],
   ["CLOUDINARY_API_SECRET", apiSecret],
@@ -54,9 +52,7 @@ if (missing.length > 0) {
 
 const creds: CloudinaryCredentials = { cloudName: cloudName!, apiKey: apiKey!, apiSecret: apiSecret! };
 
-const supabase = createClient(supabaseUrl!, serviceKey!, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const sql = neon(databaseUrl!);
 
 const ASSETS_DIR = resolve(__dirname, "../dev-assets/reference-products");
 
@@ -109,31 +105,24 @@ async function main() {
   let failed = 0;
 
   for (const [slug, fileNames] of Object.entries(PRODUCT_MEDIA_MAP)) {
-    const { data: product, error: productError } = await supabase
-      .from("products")
-      .select("id, title")
-      .eq("slug", slug)
-      .maybeSingle();
+    const productRows = await sql`SELECT id, title FROM products WHERE slug = ${slug} LIMIT 1` as { id: string; title: string }[];
+    const product = productRows[0];
 
-    if (productError || !product) {
+    if (!product) {
       console.warn(`  ⚠ Product not found for slug "${slug}" — run \`pnpm seed\` first. Skipping.`);
       continue;
     }
 
-    const { data: existingImages } = await supabase
-      .from("product_images")
-      .select("id, position")
-      .eq("product_id", product.id)
-      .order("position", { ascending: true });
+    const existingImages = await sql`SELECT id, position FROM product_images WHERE product_id = ${product.id} ORDER BY position ASC` as { id: string; position: number }[];
 
-    let nextPosition = existingImages?.length ?? 0;
+    let nextPosition = existingImages.length;
 
     for (let i = 0; i < fileNames.length; i++) {
       const fileName = fileNames[i]!;
 
       // Idempotent by convention: if this product already has at least as
       // many images as this file's index+1, assume it's already attached.
-      if (existingImages && i < existingImages.length) {
+      if (i < existingImages.length) {
         console.log(`  · ${product.title}: ${fileName} already attached, skipping`);
         skipped++;
         continue;
@@ -151,22 +140,8 @@ async function main() {
           uploadResult.public_id,
         );
 
-        const { error: insertError } = await supabase
-          .from("product_images")
-          .insert({
-            product_id: product.id,
-            public_id: verified.publicId,
-            width: verified.width,
-            height: verified.height,
-            format: verified.format,
-            bytes: verified.bytes,
-            position: nextPosition,
-            alt: `${product.title} — imagen de referencia (desarrollo)`,
-          });
-
-        if (insertError) {
-          throw new Error(`DB insert failed: ${insertError.message}`);
-        }
+        await sql`INSERT INTO product_images (product_id, public_id, width, height, format, bytes, position, alt)
+          VALUES (${product.id}, ${verified.publicId}, ${verified.width}, ${verified.height}, ${verified.format}, ${verified.bytes}, ${nextPosition}, ${`${product.title} — imagen de referencia (desarrollo)`})`;
 
         console.log(`  ✓ ${product.title}: ${fileName} -> position ${nextPosition}`);
         nextPosition++;

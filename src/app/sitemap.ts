@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/seo";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { dbQuery } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("products")
-    .select("slug, updated_at")
-    .in("status", ["AVAILABLE", "RESERVED", "SOLD"]);
+  const data = await dbQuery<{ slug: string; updated_at: string | Date }>(
+    "SELECT slug, updated_at FROM products WHERE status IN ('AVAILABLE', 'RESERVED', 'SOLD')",
+  );
 
   const productEntries: MetadataRoute.Sitemap = (data ?? []).map((row) => ({
     url: absoluteUrl(`/producto/${row.slug}`),

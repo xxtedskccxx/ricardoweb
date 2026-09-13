@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAdminProductById } from "@/server/queries";
 import { ProductForm } from "@/features/admin/ProductForm";
 import { ImageManager } from "@/features/admin/ImageManager";
 import { StatusControls } from "@/features/admin/StatusControls";
@@ -13,35 +13,14 @@ interface PageProps {
 
 export default async function EditProductPage({ params }: PageProps) {
   const { id } = await params;
-  const supabase = await createSupabaseServerClient();
-
-  const { data: product } = await supabase
-    .from("products")
-    .select(
-      "id, title, short_description, description, type, price, currency, price_mode, location, featured, attributes, status, slug, product_images(id, public_id, width, height, alt, position)",
-    )
-    .eq("id", id)
-    .maybeSingle();
+  const product = await getAdminProductById(id);
 
   if (!product) {
     notFound();
   }
 
-  const attributes = Array.isArray(product.attributes)
-    ? (product.attributes as { label: string; value: string }[])
-    : [];
-
-  const images = (product.product_images ?? [])
-    .slice()
-    .sort((a, b) => a.position - b.position)
-    .map((img) => ({
-      id: img.id,
-      publicId: img.public_id,
-      width: img.width,
-      height: img.height,
-      alt: img.alt,
-      position: img.position,
-    }));
+  const attributes = product.attributes;
+  const images = product.images;
 
   return (
     <div className="mx-auto flex max-w-[var(--container-max)] flex-col gap-8">
@@ -110,12 +89,12 @@ export default async function EditProductPage({ params }: PageProps) {
         productId={product.id}
         initial={{
           title: product.title,
-          shortDescription: product.short_description ?? "",
+          shortDescription: product.shortDescription ?? "",
           description: product.description ?? "",
           type: product.type,
           price: product.price !== null ? String(product.price) : "",
           currency: product.currency,
-          priceMode: product.price_mode,
+          priceMode: product.priceMode,
           location: product.location ?? "",
           featured: product.featured,
           attributes,

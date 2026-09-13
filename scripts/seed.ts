@@ -1,25 +1,20 @@
 /**
  * Local development seed data ONLY. Clearly synthetic — never run against
- * a production database (this script always targets the local Supabase
- * instance via the service-role key from .env.local).
+ * a production database. Point DATABASE_URL at a development Neon branch.
  */
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 
 config({ path: resolve(__dirname, "../.env.local") });
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const url = process.env.DATABASE_URL;
 
-if (!url || !serviceKey) {
-  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
+if (!url) {
+  console.error("Missing DATABASE_URL in .env.local");
   process.exit(1);
 }
-
-const supabase = createClient(url, serviceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const sql = neon(url);
 
 interface DevProduct {
   slug: string;
@@ -167,14 +162,13 @@ async function main() {
   console.log("Seeding development data (clearly marked [DEV])...");
 
   for (const product of DEV_PRODUCTS) {
-    const { error } = await supabase
-      .from("products")
-      .upsert(product, { onConflict: "slug" });
-
-    if (error) {
-      console.error(`Failed to seed "${product.slug}":`, error.message);
-    } else {
+    try {
+      await sql`INSERT INTO products (slug,title,short_description,description,type,price,currency,price_mode,location,status,featured,homepage_position,attributes,published_at)
+        VALUES (${product.slug},${product.title},${product.short_description},${product.description},${product.type},${product.price},${product.currency},${product.price_mode},${product.location},${product.status},${product.featured},${product.homepage_position},${JSON.stringify(product.attributes)}::jsonb,${product.published_at})
+        ON CONFLICT (slug) DO UPDATE SET title=excluded.title,short_description=excluded.short_description,description=excluded.description,type=excluded.type,price=excluded.price,currency=excluded.currency,price_mode=excluded.price_mode,location=excluded.location,status=excluded.status,featured=excluded.featured,homepage_position=excluded.homepage_position,attributes=excluded.attributes,published_at=excluded.published_at`;
       console.log(`  ✓ ${product.title}`);
+    } catch (error) {
+      console.error(`Failed to seed "${product.slug}":`, error instanceof Error ? error.message : error);
     }
   }
 

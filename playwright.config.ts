@@ -9,8 +9,8 @@ const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // Serial, single worker: there is one shared local Supabase instance and
-  // no per-test DB reset/transaction isolation in V1, so concurrent runs
+  // Serial, single worker: there is one shared Neon development branch and
+  // no per-test DB reset/transaction isolation, so concurrent runs
   // race real auth/session state against each other. Trade simplicity for
   // determinism rather than building test-DB isolation for its own sake.
   fullyParallel: false,

@@ -1,309 +1,101 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { z } from "zod";
+import { dbQuery } from "@/lib/db";
 import { requireAdmin } from "@/server/auth";
 import { slugify } from "@/lib/slug";
 import { cleanDisplayValue } from "@/lib/normalize";
-import {
-  productDraftSchema,
-  publicationContractSchema,
-  type ProductDraftInput,
-} from "@/schemas/product";
-export interface ActionResult<T = undefined> {
-  success: boolean;
-  error?: string;
-  fieldErrors?: Record<string, string>;
-  data?: T;
-}
+import { productDraftSchema, publicationContractSchema, type ProductDraftInput } from "@/schemas/product";
 
-function zodFieldErrors(error: {
-  issues: { path: PropertyKey[]; message: string }[];
-}) {
+export interface ActionResult<T = undefined> { success: boolean; error?: string; fieldErrors?: Record<string, string>; data?: T }
+const idSchema = z.string().uuid();
+
+function zodFieldErrors(error: { issues: { path: PropertyKey[]; message: string }[] }) {
   const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = issue.path.join(".");
-    if (key && !out[key]) out[key] = issue.message;
-  }
+  for (const issue of error.issues) { const key = issue.path.join("."); if (key && !out[key]) out[key] = issue.message; }
   return out;
 }
+function revalidatePublicCatalog() { revalidateTag("products", "max"); revalidatePath("/"); revalidatePath("/en-venta"); }
 
-function revalidatePublicCatalog() {
-  revalidateTag("products", "max");
-  revalidatePath("/");
-  revalidatePath("/en-venta");
-}
-
-async function generateUniqueSlug(
-  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
-  title: string,
-  excludeId?: string,
-): Promise<string> {
+async function generateUniqueSlug(title: string, excludeId?: string) {
   const base = slugify(title) || "producto";
-  let candidate = base;
-  let suffix = 2;
-
-  for (let attempt = 0; attempt < 50; attempt++) {
-    let query = supabase.from("products").select("id").eq("slug", candidate);
-    if (excludeId) query = query.neq("id", excludeId);
-    const { data } = await query.maybeSingle();
-
-    if (!data) return candidate;
-    candidate = `${base}-${suffix}`;
-    suffix += 1;
+  for (let suffix = 0; suffix < 50; suffix += 1) {
+    const candidate = suffix === 0 ? base : `${base}-${suffix + 1}`;
+    const rows = excludeId
+      ? await dbQuery<{ id: string }>("SELECT id FROM products WHERE slug = $1 AND id <> $2 LIMIT 1", [candidate, excludeId])
+      : await dbQuery<{ id: string }>("SELECT id FROM products WHERE slug = $1 LIMIT 1", [candidate]);
+    if (!rows[0]) return candidate;
   }
-
   return `${base}-${Date.now()}`;
 }
 
-/** Creates a new DRAFT and returns its id — image upload requires a product id to exist first. */
-export async function createDraftProduct(
-  input: ProductDraftInput,
-): Promise<ActionResult<{ id: string; slug: string }>> {
+export async function createDraftProduct(input: ProductDraftInput): Promise<ActionResult<{ id: string; slug: string }>> {
   const parsed = productDraftSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: "Revisa los campos marcados.",
-      fieldErrors: zodFieldErrors(parsed.error),
-    };
-  }
-
-  const { supabase } = await requireAdmin();
-  const slug = await generateUniqueSlug(supabase, parsed.data.title);
-
-  const { data, error } = await supabase
-    .from("products")
-    .insert({
-      slug,
-      title: parsed.data.title,
-      short_description: parsed.data.shortDescription,
-      description: parsed.data.description,
-      type: cleanDisplayValue(parsed.data.type),
-      price: parsed.data.price,
-      currency: parsed.data.currency,
-      price_mode: parsed.data.priceMode,
-      location: parsed.data.location
-        ? cleanDisplayValue(parsed.data.location)
-        : null,
-      featured: parsed.data.featured,
-      attributes: parsed.data.attributes,
-      status: "DRAFT",
-    })
-    .select("id, slug")
-    .single();
-
-  if (error) {
-    return { success: false, error: "No se pudo crear el borrador." };
-  }
-
-  revalidatePath("/admin/productos");
-  return { success: true, data };
+  if (!parsed.success) return { success: false, error: "Revisa los campos marcados.", fieldErrors: zodFieldErrors(parsed.error) };
+  await requireAdmin();
+  const slug = await generateUniqueSlug(parsed.data.title);
+  try {
+    const rows = await dbQuery<{ id: string; slug: string }>(
+      `INSERT INTO products (slug, title, short_description, description, type, price, currency, price_mode, location, featured, attributes, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,'DRAFT') RETURNING id, slug`,
+      [slug, parsed.data.title, parsed.data.shortDescription ?? null, parsed.data.description ?? null, cleanDisplayValue(parsed.data.type), parsed.data.price, parsed.data.currency, parsed.data.priceMode, parsed.data.location ? cleanDisplayValue(parsed.data.location) : null, parsed.data.featured, JSON.stringify(parsed.data.attributes)],
+    );
+    const data = rows[0];
+    if (!data) return { success: false, error: "No se pudo crear el borrador." };
+    revalidatePath("/admin/productos");
+    return { success: true, data };
+  } catch { return { success: false, error: "No se pudo crear el borrador." }; }
 }
 
-/** Updates an existing product's editable fields. Does not change status. */
-export async function updateProduct(
-  productId: string,
-  input: ProductDraftInput,
-): Promise<ActionResult> {
-  const parsed = productDraftSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: "Revisa los campos marcados.",
-      fieldErrors: zodFieldErrors(parsed.error),
-    };
-  }
-
-  const { supabase } = await requireAdmin();
-
-  const { data: existing } = await supabase
-    .from("products")
-    .select("title, slug")
-    .eq("id", productId)
-    .maybeSingle();
-
-  if (!existing) {
-    return { success: false, error: "Producto no encontrado." };
-  }
-
-  // Regenerating the slug only when the title actually changed keeps
-  // published URLs stable across unrelated edits.
-  const slug =
-    existing.title === parsed.data.title
-      ? existing.slug
-      : await generateUniqueSlug(supabase, parsed.data.title, productId);
-
-  const { error } = await supabase
-    .from("products")
-    .update({
-      slug,
-      title: parsed.data.title,
-      short_description: parsed.data.shortDescription,
-      description: parsed.data.description,
-      type: cleanDisplayValue(parsed.data.type),
-      price: parsed.data.price,
-      currency: parsed.data.currency,
-      price_mode: parsed.data.priceMode,
-      location: parsed.data.location
-        ? cleanDisplayValue(parsed.data.location)
-        : null,
-      featured: parsed.data.featured,
-      attributes: parsed.data.attributes,
-    })
-    .eq("id", productId);
-
-  if (error) {
-    return { success: false, error: "No se pudo guardar el producto." };
-  }
-
-  revalidatePath("/admin/productos");
-  revalidatePath(`/admin/productos/${productId}`);
-  revalidatePublicCatalog();
+export async function updateProduct(productId: string, input: ProductDraftInput): Promise<ActionResult> {
+  const parsed = productDraftSchema.safeParse(input); const id = idSchema.safeParse(productId);
+  if (!id.success) return { success: false, error: "Producto no encontrado." };
+  if (!parsed.success) return { success: false, error: "Revisa los campos marcados.", fieldErrors: zodFieldErrors(parsed.error) };
+  await requireAdmin();
+  const existingRows = await dbQuery<{ title: string; slug: string }>("SELECT title, slug FROM products WHERE id = $1 LIMIT 1", [productId]);
+  const existing = existingRows[0];
+  if (!existing) return { success: false, error: "Producto no encontrado." };
+  const slug = existing.title === parsed.data.title ? existing.slug : await generateUniqueSlug(parsed.data.title, productId);
+  try {
+    await dbQuery(`UPDATE products SET slug=$1,title=$2,short_description=$3,description=$4,type=$5,price=$6,currency=$7,price_mode=$8,location=$9,featured=$10,attributes=$11::jsonb WHERE id=$12`, [slug, parsed.data.title, parsed.data.shortDescription ?? null, parsed.data.description ?? null, cleanDisplayValue(parsed.data.type), parsed.data.price, parsed.data.currency, parsed.data.priceMode, parsed.data.location ? cleanDisplayValue(parsed.data.location) : null, parsed.data.featured, JSON.stringify(parsed.data.attributes), productId]);
+  } catch { return { success: false, error: "No se pudo guardar el producto." }; }
+  revalidatePath("/admin/productos"); revalidatePath(`/admin/productos/${productId}`); revalidatePublicCatalog();
   if (slug !== existing.slug) revalidatePath(`/producto/${slug}`);
   return { success: true };
 }
 
-/**
- * Publishing is a server-enforced contract (spec §19) — it is authoritative
- * regardless of what the frontend button's disabled state suggested.
- */
 export async function publishProduct(productId: string): Promise<ActionResult> {
-  const { supabase } = await requireAdmin();
-
-  const { data: product, error: fetchError } = await supabase
-    .from("products")
-    .select(
-      "title, slug, type, description, price, price_mode, product_images(id, position)",
-    )
-    .eq("id", productId)
-    .maybeSingle();
-
-  if (fetchError || !product) {
-    return { success: false, error: "Producto no encontrado." };
-  }
-
-  const images = product.product_images ?? [];
-  const parsed = publicationContractSchema.safeParse({
-    title: product.title,
-    slug: product.slug,
-    type: product.type,
-    description: product.description ?? "",
-    priceMode: product.price_mode,
-    price: product.price,
-    imageCount: images.length,
-    hasCoverImage: images.some((img) => img.position === 0),
-  });
-
-  if (!parsed.success) {
-    const messages = parsed.error.issues.map((i) => i.message);
-    return {
-      success: false,
-      error: `No se puede publicar: ${messages.join(" · ")}`,
-      fieldErrors: zodFieldErrors(parsed.error),
-    };
-  }
-
-  const { error } = await supabase
-    .from("products")
-    .update({ status: "AVAILABLE", published_at: new Date().toISOString() })
-    .eq("id", productId);
-
-  if (error) {
-    return { success: false, error: "No se pudo publicar el producto." };
-  }
-
-  revalidatePath("/admin/productos");
-  revalidatePath(`/admin/productos/${productId}`);
-  revalidatePath(`/producto/${product.slug}`);
-  revalidatePublicCatalog();
+  const id = idSchema.safeParse(productId); if (!id.success) return { success: false, error: "Producto no encontrado." };
+  await requireAdmin();
+  const rows = await dbQuery<{ title: string; slug: string; type: string; description: string | null; price: string | number | null; price_mode: "FIXED" | "NEGOTIABLE" | "CONTACT"; image_count: number; has_cover: boolean }>(
+    `SELECT p.title,p.slug,p.type,p.description,p.price,p.price_mode,count(pi.id)::int AS image_count,coalesce(bool_or(pi.position=0),false) AS has_cover FROM products p LEFT JOIN product_images pi ON pi.product_id=p.id WHERE p.id=$1 GROUP BY p.id`, [productId]);
+  const product = rows[0]; if (!product) return { success: false, error: "Producto no encontrado." };
+  const parsed = publicationContractSchema.safeParse({ title: product.title, slug: product.slug, type: product.type, description: product.description ?? "", priceMode: product.price_mode, price: product.price === null ? null : Number(product.price), imageCount: product.image_count, hasCoverImage: product.has_cover });
+  if (!parsed.success) return { success: false, error: `No se puede publicar: ${parsed.error.issues.map((issue) => issue.message).join(" · ")}`, fieldErrors: zodFieldErrors(parsed.error) };
+  try { await dbQuery("UPDATE products SET status='AVAILABLE', published_at=now() WHERE id=$1", [productId]); } catch { return { success: false, error: "No se pudo publicar el producto." }; }
+  revalidatePath("/admin/productos"); revalidatePath(`/admin/productos/${productId}`); revalidatePath(`/producto/${product.slug}`); revalidatePublicCatalog();
   return { success: true };
 }
 
-const STATUS_TRANSITIONS = {
-  unpublish: "DRAFT",
-  available: "AVAILABLE",
-  reserved: "RESERVED",
-  sold: "SOLD",
-} as const;
-
-export async function setProductStatus(
-  productId: string,
-  action: keyof typeof STATUS_TRANSITIONS,
-): Promise<ActionResult> {
-  const { supabase } = await requireAdmin();
-  const nextStatus = STATUS_TRANSITIONS[action];
-
-  const { data: product } = await supabase
-    .from("products")
-    .select("slug, published_at")
-    .eq("id", productId)
-    .maybeSingle();
-
-  if (!product) {
-    return { success: false, error: "Producto no encontrado." };
-  }
-
-  const patch: {
-    status: "DRAFT" | "AVAILABLE" | "RESERVED" | "SOLD";
-    published_at?: string | null;
-  } = {
-    status: nextStatus,
-  };
-  if (nextStatus !== "DRAFT" && !product.published_at) {
-    patch.published_at = new Date().toISOString();
-  }
-
-  const { error } = await supabase
-    .from("products")
-    .update(patch)
-    .eq("id", productId);
-
-  if (error) {
-    return {
-      success: false,
-      error: "No se pudo cambiar el estado del producto.",
-    };
-  }
-
-  revalidatePath("/admin/productos");
-  revalidatePath(`/admin/productos/${productId}`);
-  revalidatePath(`/producto/${product.slug}`);
-  revalidatePublicCatalog();
+const STATUS_TRANSITIONS = { unpublish: "DRAFT", available: "AVAILABLE", reserved: "RESERVED", sold: "SOLD" } as const;
+export async function setProductStatus(productId: string, action: keyof typeof STATUS_TRANSITIONS): Promise<ActionResult> {
+  const id = idSchema.safeParse(productId); if (!id.success) return { success: false, error: "Producto no encontrado." };
+  await requireAdmin(); const nextStatus = STATUS_TRANSITIONS[action];
+  const rows = await dbQuery<{ slug: string; published_at: string | Date | null }>("SELECT slug,published_at FROM products WHERE id=$1 LIMIT 1", [productId]);
+  const product = rows[0]; if (!product) return { success: false, error: "Producto no encontrado." };
+  try { await dbQuery(`UPDATE products SET status=$1, published_at=CASE WHEN $1='DRAFT' THEN published_at WHEN published_at IS NULL THEN now() ELSE published_at END WHERE id=$2`, [nextStatus, productId]); } catch { return { success: false, error: "No se pudo cambiar el estado del producto." }; }
+  revalidatePath("/admin/productos"); revalidatePath(`/admin/productos/${productId}`); revalidatePath(`/producto/${product.slug}`); revalidatePublicCatalog();
   return { success: true };
 }
 
 export async function deleteProduct(productId: string): Promise<ActionResult> {
-  const { supabase } = await requireAdmin();
-
-  const { data: product } = await supabase
-    .from("products")
-    .select("slug, product_images(public_id)")
-    .eq("id", productId)
-    .maybeSingle();
-
-  const { error } = await supabase
-    .from("products")
-    .delete()
-    .eq("id", productId);
-
-  if (error) {
-    return { success: false, error: "No se pudo eliminar el producto." };
-  }
-
-  // Cloudinary originals for a deleted product are queued for cleanup
-  // rather than deleted inline — keeps deletion fast and never blocks the
-  // admin on a third-party API call.
-  if (product?.product_images?.length) {
-    await supabase.from("media_cleanup_queue").upsert(
-      product.product_images.map((img: { public_id: string }) => ({
-        public_id: img.public_id,
-      })),
-      { onConflict: "public_id", ignoreDuplicates: true },
-    );
-  }
-
-  revalidatePath("/admin/productos");
-  revalidatePublicCatalog();
-  if (product?.slug) revalidatePath(`/producto/${product.slug}`);
+  const id = idSchema.safeParse(productId); if (!id.success) return { success: false, error: "Producto no encontrado." };
+  await requireAdmin();
+  const rows = await dbQuery<{ slug: string; public_id: string }>("SELECT p.slug, pi.public_id FROM products p LEFT JOIN product_images pi ON pi.product_id=p.id WHERE p.id=$1", [productId]);
+  if (!rows[0]) return { success: false, error: "Producto no encontrado." };
+  try { await dbQuery("DELETE FROM products WHERE id=$1", [productId]); } catch { return { success: false, error: "No se pudo eliminar el producto." }; }
+  for (const row of rows) if (row.public_id) { try { await dbQuery("INSERT INTO media_cleanup_queue (public_id) VALUES ($1) ON CONFLICT (public_id) DO NOTHING", [row.public_id]); } catch { /* cleanup can be retried separately */ } }
+  revalidatePath("/admin/productos"); revalidatePublicCatalog(); revalidatePath(`/producto/${rows[0].slug}`);
   return { success: true };
 }

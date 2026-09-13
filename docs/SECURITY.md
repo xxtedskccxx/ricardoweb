@@ -6,7 +6,8 @@
 
 ## Authentication
 
-Use Supabase Auth with current official SSR guidance.
+Use a short-lived HS256 token in a secure, httpOnly cookie. Verify the token
+and the corresponding row in `admins` on every server request.
 
 V1 auth:
 
@@ -33,24 +34,11 @@ Validate authenticated user against the `admins` table.
 
 Server authorization happens before mutation logic.
 
-### 3. RLS
+### 3. Database boundary
 
-PostgreSQL RLS is mandatory on protected tables.
-
-Anonymous users:
-
-- cannot write
-- cannot read drafts
-
-Authenticated non-admin users:
-
-- cannot perform admin writes
-
-Admins:
-
-- may perform approved CRUD/status operations
-
-RLS must be tested against a real/local Supabase database when possible.
+The Neon connection string is server-only. Public SQL statements explicitly
+exclude drafts, while every admin statement runs only after `requireAdmin()`.
+The database role is never sent to the browser.
 
 ## Draft leakage
 
@@ -100,7 +88,6 @@ Never expose server secrets through `NEXT_PUBLIC_*` variables.
 
 Privileged values include:
 
-- Supabase service-role key
 - Cloudinary API secret
 
 Provide `.env.example` with names only.
@@ -117,7 +104,8 @@ Do not use `dangerouslySetInnerHTML` unless a future sanitized rich-text feature
 
 ## SQL injection
 
-Use parameterized Supabase/database APIs. Do not build SQL with interpolated user strings.
+Use parameterized Neon queries. Dynamic filters are assembled from fixed SQL
+fragments and `$n` placeholders; never interpolate user input into SQL text.
 
 ## CSRF / origin
 
@@ -155,5 +143,5 @@ Before completion, test/review:
 - manipulated status transitions
 - image metadata tampering
 - secret exposure in browser bundle
-- RLS behavior
+- database-role and query boundary behavior
 - destructive operations

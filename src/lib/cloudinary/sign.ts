@@ -1,5 +1,5 @@
 import "server-only";
-import { getServerEnv } from "@/lib/env";
+import { getCloudinaryEnv } from "@/lib/env";
 import { buildProductFolder } from "./folder";
 import { signParams } from "./core";
 
@@ -18,7 +18,7 @@ export interface UploadSignature {
  * API directly. Requires an already-verified admin session at the caller.
  */
 export function createUploadSignature(productId: string): UploadSignature {
-  const env = getServerEnv();
+  const env = getCloudinaryEnv();
   const timestamp = Math.round(Date.now() / 1000);
   const folder = buildProductFolder(productId);
 

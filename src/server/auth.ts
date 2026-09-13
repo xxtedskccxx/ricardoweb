@@ -1,42 +1,31 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { dbQuery } from "@/lib/db";
+import { getServerEnv } from "@/lib/env";
+import { verifySessionToken, type AdminSession } from "@/lib/auth/session";
+
+export const ADMIN_SESSION_COOKIE = "altamar_admin_session";
 
 export class UnauthorizedError extends Error {
-  constructor() {
-    super("No autorizado.");
-    this.name = "UnauthorizedError";
-  }
+  constructor() { super("No autorizado."); this.name = "UnauthorizedError"; }
 }
 
-/**
- * The real security boundary for every admin query and Server Action.
- * Calls `auth.getUser()` — which validates the JWT against the auth
- * server — rather than trusting the locally-cached session, then checks
- * membership in the `admins` allow-list. Throws before any input is read
- * if either check fails. Middleware redirects are UX only; this (plus RLS)
- * is what actually protects the data.
- */
+export async function readAdminSession(): Promise<AdminSession | null> {
+  const token = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const session = await verifySessionToken(token, getServerEnv().AUTH_SECRET);
+  if (!session) return null;
+  const admin = await dbQuery<{ id: string; email: string }>(
+    "SELECT id, email FROM admins WHERE id = $1 LIMIT 1",
+    [session.sub],
+  );
+  const row = admin[0];
+  return row ? { sub: row.id, email: row.email, role: "admin" } : null;
+}
+
+/** Server-side authorization boundary for every admin page and mutation. */
 export async function requireAdmin() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    throw new UnauthorizedError();
-  }
-
-  const { data: adminRow, error: adminError } = await supabase
-    .from("admins")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (adminError || !adminRow) {
-    throw new UnauthorizedError();
-  }
-
-  return { supabase, user };
+  const admin = await readAdminSession();
+  if (!admin) throw new UnauthorizedError();
+  return { admin };
 }

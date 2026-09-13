@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageTransition } from "@/components/motion/Reveal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatPrice } from "@/lib/money";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAdminDashboardData } from "@/server/queries";
 
 const STATUSES = [
   { key: "AVAILABLE", label: "Disponibles", tone: "bg-[var(--color-available)]" },
@@ -10,28 +10,6 @@ const STATUSES = [
   { key: "RESERVED", label: "Reservados", tone: "bg-[var(--color-reserved)]" },
   { key: "SOLD", label: "Vendidos", tone: "bg-[var(--color-sold)]" },
 ] as const;
-
-async function getDashboardData() {
-  const supabase = await createSupabaseServerClient();
-
-  const counts = await Promise.all(
-    STATUSES.map(async ({ key }) => {
-      const { count } = await supabase
-        .from("products")
-        .select("id", { count: "exact", head: true })
-        .eq("status", key);
-      return [key, count ?? 0] as const;
-    }),
-  );
-
-  const { data: recent } = await supabase
-    .from("products")
-    .select("id, title, type, price, currency, price_mode, status, updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(5);
-
-  return { counts: Object.fromEntries(counts), recent: recent ?? [] };
-}
 
 function formatUpdatedAt(value: string) {
   return new Intl.DateTimeFormat("es-DO", {
@@ -41,7 +19,7 @@ function formatUpdatedAt(value: string) {
 }
 
 export default async function AdminDashboardPage() {
-  const { counts, recent } = await getDashboardData();
+  const { counts, recent } = await getAdminDashboardData();
 
   return (
     <PageTransition>
