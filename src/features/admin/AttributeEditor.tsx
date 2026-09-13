@@ -151,7 +151,7 @@ export function AttributeEditor({ name, initial, suggestions = [] }: AttributeEd
 }
 
 const inputClass =
-  "min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)]/70 transition-[border-color,box-shadow] duration-[var(--duration-fast)] focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20";
+  "min-h-12 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 text-base text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)]/70 transition-[border-color,box-shadow] duration-[var(--duration-fast)] focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20";
 
 const iconButtonClass =
   "flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border-strong)] text-[var(--color-ink)] transition-[background-color,border-color,transform] duration-[var(--duration-fast)] hover:border-[var(--color-olive)] hover:bg-[var(--color-bone)] active:scale-[0.98] disabled:cursor-default disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/30";

@@ -1,5 +1,23 @@
 "use client";
 
+/*
+  DESIGN TOKENS
+  -----------------------------------------
+  Background:   #F7F8F5  Surface: #FFFFFF  Primary: #24402C
+  Text:         #17231D  Text Muted: #59665E  Border: rgba(23,35,29,.18)
+
+  TYPOGRAPHY
+  -----------------------------------------
+  Display: Fraunces / 500 / fluid headings
+  Body:    system sans / 400–600 / 16px controls
+
+  STYLE DECISION
+  -----------------------------------------
+  Style:       visual-first task form for a calm editorial admin
+  Mood:        reassuring, obvious, low cognitive load
+  Anti-patterns to avoid: placeholder-only labels, dense paragraphs, hidden state
+*/
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -154,6 +172,8 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
         transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
         className="flex min-w-0 flex-col gap-6"
       >
+        <FormGuide />
+
         {error && (
           <p role="alert" className="rounded-[var(--radius-md)] border border-[var(--color-danger)]/20 bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
             {error}
@@ -167,7 +187,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
             description="Empieza por los datos que alguien necesita para entenderlo rápido."
           />
           <div className="mt-6 flex flex-col gap-5">
-            <Field label="Título" error={fieldErrors.title} hint="Pon un nombre descriptivo; evita frases promocionales." required>
+            <Field label="Título" symbol="A" error={fieldErrors.title} hint="Ejemplo: Villa frente al mar con piscina." required>
               <input
                 name="title"
                 value={draft.title}
@@ -176,16 +196,17 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
                 minLength={3}
                 maxLength={140}
                 autoComplete="off"
+                placeholder="Ej. Villa frente al mar"
                 className={inputClass}
               />
             </Field>
-            <Field label="Tipo" error={fieldErrors.type} hint="Elige una categoría para mostrar los campos más útiles." required>
+            <Field label="Tipo" symbol="◈" error={fieldErrors.type} hint="Elige una opción o escribe otra." required>
               <input
                 name="type"
                 value={draft.type}
                 onChange={(event) => updateDraft("type", event.target.value)}
                 required
-                placeholder="Villa, Vehículo, Reloj…"
+                placeholder="Ej. Villa, vehículo o reloj"
                 list="product-type-options"
                 autoComplete="off"
                 className={inputClass}
@@ -215,21 +236,23 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
                 );
               })}
             </div>
-            <Field label="Descripción corta" error={fieldErrors.shortDescription} hint="Resume lo esencial en una frase.">
+            <Field label="Descripción corta" symbol="≡" error={fieldErrors.shortDescription} hint="Una frase que explique lo más importante." optional>
               <input
                 name="shortDescription"
                 value={draft.shortDescription}
                 onChange={(event) => updateDraft("shortDescription", event.target.value)}
                 maxLength={200}
+                placeholder="Ej. Cinco habitaciones y acceso directo a la playa."
                 className={inputClass}
               />
             </Field>
-            <Field label="Descripción completa" error={fieldErrors.description} hint="Incluye estado, medidas, ubicación y cualquier detalle importante.">
+            <Field label="Descripción completa" symbol="☷" error={fieldErrors.description} hint="Cuenta los detalles que una persona querría saber." optional>
               <textarea
                 name="description"
                 value={draft.description}
                 onChange={(event) => updateDraft("description", event.target.value)}
                 rows={6}
+                placeholder="Ej. Estado, medidas, qué incluye y cualquier detalle importante."
                 className={`${inputClass} py-3 leading-relaxed`}
               />
             </Field>
@@ -240,53 +263,71 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
           <SectionHeading
             title="Precio"
             eyebrow="Cómo se presenta"
-            description="Define cómo quieres mostrar el precio en la publicación."
+            description="Elige una opción y completa solo lo que corresponda."
           />
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <Field label="Modo" hint="Así verá el precio quien visite la publicación.">
-              <select
-                name="priceMode"
-                value={draft.priceMode}
-                onChange={(event) => updateDraft("priceMode", event.target.value as ProductFormValues["priceMode"])}
-                className={inputClass}
-              >
-                <option value="FIXED">Fijo</option>
-                <option value="NEGOTIABLE">Negociable</option>
-                <option value="CONTACT">A consultar</option>
-              </select>
-            </Field>
-            {draft.priceMode === "CONTACT" ? (
-              <div className="flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--color-bone)] px-3 text-sm text-[var(--color-ink-muted)] sm:col-span-2">
-                El precio se mostrará como «A consultar».
-              </div>
-            ) : (
-              <>
-                <Field label="Precio" error={fieldErrors.price} hint="Escribe solo el número; no hace falta añadir el símbolo.">
-                  <input
-                    name="price"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={draft.price}
-                    onChange={(event) => updateDraft("price", event.target.value)}
-                    inputMode="decimal"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Moneda">
-                  <select
-                    name="currency"
-                    value={draft.currency}
-                    onChange={(event) => updateDraft("currency", event.target.value as ProductFormValues["currency"])}
-                    className={inputClass}
-                  >
-                    <option value="USD">USD</option>
-                    <option value="DOP">DOP</option>
-                  </select>
-                </Field>
-              </>
-            )}
-          </div>
+          <fieldset className="mt-6">
+            <legend className="sr-only">¿Cómo quieres mostrar el precio?</legend>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <PriceChoice
+                value="FIXED"
+                selected={draft.priceMode === "FIXED"}
+                onChange={() => updateDraft("priceMode", "FIXED")}
+                symbol="$"
+                title="Precio fijo"
+                description="Una cantidad exacta"
+              />
+              <PriceChoice
+                value="NEGOTIABLE"
+                selected={draft.priceMode === "NEGOTIABLE"}
+                onChange={() => updateDraft("priceMode", "NEGOTIABLE")}
+                symbol="↔"
+                title="Negociable"
+                description="Se puede conversar"
+              />
+              <PriceChoice
+                value="CONTACT"
+                selected={draft.priceMode === "CONTACT"}
+                onChange={() => updateDraft("priceMode", "CONTACT")}
+                symbol="?"
+                title="A consultar"
+                description="Te preguntan el precio"
+              />
+            </div>
+          </fieldset>
+
+          {draft.priceMode === "CONTACT" ? (
+            <div className="mt-5 flex items-center gap-3 rounded-[var(--radius-md)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-bone)]/70 px-4 py-4 text-sm text-[var(--color-ink-muted)]">
+              <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--color-surface)] text-lg font-semibold text-[var(--color-olive)]">?</span>
+              <span>La publicación mostrará «A consultar» y las personas podrán escribirte.</span>
+            </div>
+          ) : (
+            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-[1.2fr_0.8fr]">
+              <Field label="Precio" symbol="$" error={fieldErrors.price} hint="Solo escribe números." required>
+                <input
+                  name="price"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={draft.price}
+                  onChange={(event) => updateDraft("price", event.target.value)}
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  className={`${inputClass} text-lg font-medium tabular-nums`}
+                />
+              </Field>
+              <Field label="Moneda" symbol="¤" hint="La moneda que verán." required>
+                <select
+                  name="currency"
+                  value={draft.currency}
+                  onChange={(event) => updateDraft("currency", event.target.value as ProductFormValues["currency"])}
+                  className={`${inputClass} text-base font-medium`}
+                >
+                  <option value="USD">USD · Dólares</option>
+                  <option value="DOP">DOP · Pesos dominicanos</option>
+                </select>
+              </Field>
+            </div>
+          )}
           {draft.priceMode === "CONTACT" && <input type="hidden" name="price" value="" />}
           {draft.priceMode === "CONTACT" && <input type="hidden" name="currency" value={draft.currency} />}
         </section>
@@ -298,7 +339,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
             description="Indica una zona y decide con calma si quieres enseñarla en el anuncio."
           />
           <div className="mt-6 flex flex-col gap-6">
-            <Field label="Zona o referencia" hint="Escribe una ciudad, sector o punto cercano. No hace falta poner la dirección exacta.">
+            <Field label="Zona o referencia" symbol="⌖" hint="Escribe una ciudad, sector o punto cercano. No hace falta poner la dirección exacta." optional>
               <input
                 name="location"
                 value={draft.location}
@@ -490,6 +531,87 @@ function SectionHeading({
   );
 }
 
+function FormGuide() {
+  return (
+    <section
+      aria-label="Pasos para crear un producto"
+      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bone)]/75 p-4 sm:p-5"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-olive)]">Guía rápida</p>
+        <span className="rounded-[var(--radius-pill)] bg-[var(--color-surface)] px-3 py-1 text-xs font-medium text-[var(--color-ink-muted)]">1–2 minutos</span>
+      </div>
+      <ol className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <GuideStep number="1" label="Datos" detail="Qué es" active />
+        <GuideStep number="2" label="Precio" detail="Cuánto cuesta" />
+        <GuideStep number="3" label="Ubicación" detail="Dónde está" />
+        <GuideStep number="4" label="Fotos" detail="Después de guardar" />
+      </ol>
+    </section>
+  );
+}
+
+function GuideStep({
+  number,
+  label,
+  detail,
+  active = false,
+}: {
+  number: string;
+  label: string;
+  detail: string;
+  active?: boolean;
+}) {
+  return (
+    <li className={`flex items-center gap-2 rounded-[var(--radius-md)] p-2.5 ${active ? "bg-[var(--color-surface)] shadow-[var(--shadow-sm)]" : ""}`}>
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-semibold ${active ? "bg-[var(--color-olive)] text-[var(--color-ivory)]" : "bg-[var(--color-surface)] text-[var(--color-ink-muted)]"}`}>
+        {number}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-[var(--color-ink)]">{label}</span>
+        <span className="block truncate text-xs text-[var(--color-ink-muted)]">{detail}</span>
+      </span>
+    </li>
+  );
+}
+
+function PriceChoice({
+  value,
+  selected,
+  onChange,
+  symbol,
+  title,
+  description,
+}: {
+  value: ProductFormValues["priceMode"];
+  selected: boolean;
+  onChange: () => void;
+  symbol: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <label className="group relative flex min-h-24 cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-4 transition-[border-color,background-color,box-shadow,transform] duration-[var(--duration-fast)] hover:-translate-y-px hover:border-[var(--color-olive)] focus-within:ring-2 focus-within:ring-[var(--color-olive)]/25 has-[:checked]:border-[var(--color-olive)] has-[:checked]:bg-[var(--color-available-bg)] has-[:checked]:shadow-[var(--shadow-sm)]">
+      <input
+        type="radio"
+        name="priceMode"
+        value={value}
+        checked={selected}
+        onChange={onChange}
+        className="peer sr-only"
+      />
+      <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[var(--color-border-strong)] bg-[var(--color-bone)] text-xl font-semibold text-[var(--color-olive)] peer-checked:border-[var(--color-olive)] peer-checked:bg-[var(--color-olive)] peer-checked:text-[var(--color-ivory)]">
+        {symbol}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-[var(--color-ink)]">{title}</span>
+        <span className="mt-1 block text-xs leading-relaxed text-[var(--color-ink-muted)]">{description}</span>
+      </span>
+      <span aria-hidden="true" className="absolute right-3 top-3 hidden h-5 w-5 place-items-center rounded-full bg-[var(--color-olive)] text-xs font-bold text-[var(--color-ivory)] peer-checked:grid">✓</span>
+    </label>
+  );
+}
+
 function ChecklistItem({ label, done }: { label: string; done: boolean }) {
   return (
     <li className="flex items-center gap-3 text-[var(--color-ink)]">
@@ -506,19 +628,23 @@ const sectionClass =
   "rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-sm)] sm:p-7";
 
 const inputClass =
-  "min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-ink)] transition-[border-color,box-shadow,background-color] duration-[var(--duration-fast)] placeholder:text-[var(--color-ink-muted)]/70 focus-visible:border-[var(--color-olive)] focus-visible:bg-[var(--color-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20";
+  "min-h-12 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 text-base text-[var(--color-ink)] transition-[border-color,box-shadow,background-color] duration-[var(--duration-fast)] placeholder:text-[var(--color-ink-muted)]/70 focus-visible:border-[var(--color-olive)] focus-visible:bg-[var(--color-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20";
 
 function Field({
   label,
+  symbol,
   error,
   hint,
   required,
+  optional,
   children,
 }: {
   label: string;
+  symbol?: string;
   error?: string;
   hint?: string;
   required?: boolean;
+  optional?: boolean;
   children: ReactElement<Record<string, unknown>>;
 }) {
   const id = useId();
@@ -527,16 +653,20 @@ function Field({
   const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-[var(--color-ink)]">
-        {label}
-        {required && <span aria-hidden="true" className="ml-1 text-[var(--color-olive)]">*</span>}
-      </label>
+      <div className="flex items-center gap-2">
+        {symbol && <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--color-bone)] text-xs font-semibold text-[var(--color-olive)]">{symbol}</span>}
+        <label htmlFor={id} className="text-sm font-semibold text-[var(--color-ink)]">
+          {label}
+          {required && <span aria-hidden="true" className="ml-1 text-[var(--color-olive)]">*</span>}
+          {optional && <span className="ml-1 text-xs font-normal text-[var(--color-ink-muted)]">(opcional)</span>}
+        </label>
+      </div>
       {cloneElement(children, {
         id,
         "aria-invalid": Boolean(error),
         "aria-describedby": describedBy,
       })}
-      {hint && <p id={hintId} className="text-xs leading-relaxed text-[var(--color-ink-muted)]">{hint}</p>}
+      {hint && <p id={hintId} className="text-sm leading-relaxed text-[var(--color-ink-muted)]">{hint}</p>}
       {error && <span id={errorId} className="text-xs text-[var(--color-danger)]">{error}</span>}
     </div>
   );
