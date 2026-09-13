@@ -92,7 +92,7 @@ export function AttributeEditor({ name, initial, suggestions = [] }: AttributeEd
             type="text"
             value={item.label}
             onChange={(e) => update(index, { label: e.target.value })}
-            placeholder="Etiqueta (ej. Habitaciones)"
+            placeholder="Qué quieres destacar (ej. Habitaciones)"
             aria-label={`Etiqueta de especificación ${index + 1}`}
             className={inputClass}
           />
@@ -100,7 +100,7 @@ export function AttributeEditor({ name, initial, suggestions = [] }: AttributeEd
             type="text"
             value={item.value}
             onChange={(e) => update(index, { value: e.target.value })}
-            placeholder="Valor (ej. 4)"
+            placeholder="Escribe el dato (ej. 4 habitaciones)"
             aria-label={`Valor de especificación ${index + 1}`}
             className={inputClass}
           />

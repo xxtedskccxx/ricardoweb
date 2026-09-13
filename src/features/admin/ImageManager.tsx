@@ -433,7 +433,7 @@ function SortableImageCard({
         type="text"
         defaultValue={image.alt ?? ""}
         onBlur={(e) => onAltChange(e.target.value)}
-        placeholder="Texto alternativo"
+        placeholder="Ej. Sala con piscina y vista al mar"
         className="h-9 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 text-xs"
       />
 

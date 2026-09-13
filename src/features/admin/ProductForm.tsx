@@ -187,7 +187,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
             description="Empieza por los datos que alguien necesita para entenderlo rápido."
           />
           <div className="mt-6 flex flex-col gap-5">
-            <Field label="Título" symbol="A" error={fieldErrors.title} hint="Ejemplo: Villa frente al mar con piscina." required>
+            <Field label="Título" icon="title" error={fieldErrors.title} hint="Ejemplo: Villa frente al mar con piscina." required>
               <input
                 name="title"
                 value={draft.title}
@@ -200,7 +200,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
                 className={inputClass}
               />
             </Field>
-            <Field label="Tipo" symbol="◈" error={fieldErrors.type} hint="Elige una opción o escribe otra." required>
+            <Field label="Tipo" icon="type" error={fieldErrors.type} hint="Elige una opción o escribe otra." required>
               <input
                 name="type"
                 value={draft.type}
@@ -236,7 +236,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
                 );
               })}
             </div>
-            <Field label="Descripción corta" symbol="≡" error={fieldErrors.shortDescription} hint="Una frase que explique lo más importante." optional>
+            <Field label="Descripción corta" icon="shortDescription" error={fieldErrors.shortDescription} hint="Una frase que explique lo más importante." optional>
               <input
                 name="shortDescription"
                 value={draft.shortDescription}
@@ -246,7 +246,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
                 className={inputClass}
               />
             </Field>
-            <Field label="Descripción completa" symbol="☷" error={fieldErrors.description} hint="Cuenta los detalles que una persona querría saber." optional>
+            <Field label="Descripción completa" icon="description" error={fieldErrors.description} hint="Cuenta los detalles que una persona querría saber." optional>
               <textarea
                 name="description"
                 value={draft.description}
@@ -302,7 +302,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
             </div>
           ) : (
             <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-[1.2fr_0.8fr]">
-              <Field label="Precio" symbol="$" error={fieldErrors.price} hint="Solo escribe números." required>
+              <Field label="Precio" icon="price" error={fieldErrors.price} hint="Solo escribe números." required>
                 <input
                   name="price"
                   type="number"
@@ -315,7 +315,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
                   className={`${inputClass} text-lg font-medium tabular-nums`}
                 />
               </Field>
-              <Field label="Moneda" symbol="¤" hint="La moneda que verán." required>
+              <Field label="Moneda" icon="currency" hint="La moneda que verán." required>
                 <select
                   name="currency"
                   value={draft.currency}
@@ -339,7 +339,7 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
             description="Indica una zona y decide con calma si quieres enseñarla en el anuncio."
           />
           <div className="mt-6 flex flex-col gap-6">
-            <Field label="Zona o referencia" symbol="⌖" hint="Escribe una ciudad, sector o punto cercano. No hace falta poner la dirección exacta." optional>
+            <Field label="Zona o referencia" icon="location" hint="Escribe una ciudad, sector o punto cercano. No hace falta poner la dirección exacta." optional>
               <input
                 name="location"
                 value={draft.location}
@@ -630,9 +630,11 @@ const sectionClass =
 const inputClass =
   "min-h-12 w-full rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 text-base text-[var(--color-ink)] transition-[border-color,box-shadow,background-color] duration-[var(--duration-fast)] placeholder:text-[var(--color-ink-muted)]/70 focus-visible:border-[var(--color-olive)] focus-visible:bg-[var(--color-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20";
 
+type FieldIconName = "title" | "type" | "shortDescription" | "description" | "price" | "currency" | "location";
+
 function Field({
   label,
-  symbol,
+  icon,
   error,
   hint,
   required,
@@ -640,7 +642,7 @@ function Field({
   children,
 }: {
   label: string;
-  symbol?: string;
+  icon?: FieldIconName;
   error?: string;
   hint?: string;
   required?: boolean;
@@ -654,7 +656,7 @@ function Field({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
-        {symbol && <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--color-bone)] text-xs font-semibold text-[var(--color-olive)]">{symbol}</span>}
+        {icon && <FieldIcon name={icon} />}
         <label htmlFor={id} className="text-sm font-semibold text-[var(--color-ink)]">
           {label}
           {required && <span aria-hidden="true" className="ml-1 text-[var(--color-olive)]">*</span>}
@@ -669,5 +671,21 @@ function Field({
       {hint && <p id={hintId} className="text-sm leading-relaxed text-[var(--color-ink-muted)]">{hint}</p>}
       {error && <span id={errorId} className="text-xs text-[var(--color-danger)]">{error}</span>}
     </div>
+  );
+}
+
+function FieldIcon({ name }: { name: FieldIconName }) {
+  return (
+    <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--color-bone)] text-[var(--color-olive)]">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {name === "title" && <><path d="M5 5h14" /><path d="M12 5v14" /><path d="M8 19h8" /></>}
+        {name === "type" && <><path d="m4 7 4-3 12 8-8 8-8-8Z" /><circle cx="9" cy="8" r="1" /></>}
+        {name === "shortDescription" && <><path d="M5 6h14" /><path d="M5 12h10" /><path d="M5 18h14" /></>}
+        {name === "description" && <><path d="M6 3.5h8l4 4V20.5H6Z" /><path d="M14 3.5v4h4" /><path d="M9 12h6" /><path d="M9 16h6" /></>}
+        {name === "price" && <><path d="M12 3.5v17" /><path d="M16 7.5c-.8-1.1-2-1.7-3.8-1.7-2 0-3.5 1-3.5 2.6 0 4 7.3 1.9 7.3 5.9 0 1.6-1.4 2.8-3.7 2.8-1.8 0-3.1-.6-4-1.8" /></>}
+        {name === "currency" && <><circle cx="12" cy="12" r="8.5" /><path d="M9 9.5h4.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h5" /></>}
+        {name === "location" && <><path d="M19 10.5c0 4.7-7 10-7 10s-7-5.3-7-10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10.5" r="2.2" /></>}
+      </svg>
+    </span>
   );
 }

@@ -42,7 +42,7 @@ export function AdminProductFilters() {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar por nombre…"
+        placeholder="Ej. Toyota, villa o Punta Cana"
         className="h-11 flex-1 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20"
       />
       <label htmlFor={statusId} className="sr-only">Filtrar por estado</label>
