@@ -8,12 +8,7 @@ import {
   getDistinctTypes,
 } from "@/server/queries";
 import { productFilterSchema } from "@/schemas/product";
-
-export const metadata: Metadata = {
-  title: "En venta",
-  description:
-    "Explora la colección completa: propiedades, vehículos y artículos únicos disponibles.",
-};
+import { absoluteUrl, serializeJsonLd } from "@/lib/seo";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -21,6 +16,44 @@ interface PageProps {
 
 function firstValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const hasFilters = ["q", "tipo", "lugar", "min", "max", "orden", "vendidos", "page"].some(
+    (key) => Boolean(firstValue(params[key])),
+  );
+  const title = hasFilters ? "Resultados de búsqueda" : "En venta";
+  const description = hasFilters
+    ? "Resultados de propiedades, vehículos y piezas disponibles en la colección de Altamar."
+    : "Propiedades, vehículos y piezas en venta en República Dominicana. Filtra por tipo o ubicación y revisa cada publicación.";
+  const socialTitle = hasFilters ? "Resultados de búsqueda | Altamar" : "En venta | Altamar";
+
+  return {
+    title,
+    description,
+    alternates: { canonical: absoluteUrl("/en-venta") },
+    robots: hasFilters ? { index: false, follow: true } : { index: true, follow: true },
+    openGraph: {
+      title: socialTitle,
+      description,
+      url: absoluteUrl("/en-venta"),
+      images: [
+        {
+          url: absoluteUrl("/images/altamar/hero.webp"),
+          width: 1200,
+          height: 630,
+          alt: "Altamar — propiedades y piezas en República Dominicana",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: socialTitle,
+      description,
+      images: [absoluteUrl("/images/altamar/hero.webp")],
+    },
+  };
 }
 
 export default async function CatalogPage({ searchParams }: PageProps) {
@@ -52,6 +85,18 @@ export default async function CatalogPage({ searchParams }: PageProps) {
   const hasActiveFilters = Boolean(
     filters.q || filters.tipo || filters.lugar || filters.min || filters.max,
   );
+  const itemListStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Propiedades y piezas en venta en República Dominicana",
+    numberOfItems: totalCount,
+    itemListElement: products.map((product, index) => ({
+      "@type": "ListItem",
+      position: (page - 1) * pageSize + index + 1,
+      name: product.title,
+      url: absoluteUrl(`/producto/${product.slug}`),
+    })),
+  };
 
   function pageHref(nextPage: number) {
     const params = new URLSearchParams();
@@ -67,13 +112,18 @@ export default async function CatalogPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-[var(--container-max)] px-4 py-12 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListStructuredData) }}
+      />
       <div className="flex flex-col gap-2 pb-8">
         <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-sand-text)]">
-          Colección completa
+          Inventario disponible
         </p>
-        <h1 className="font-display text-3xl text-[var(--color-ink)]">
-          En venta
-        </h1>
+        <h1 className="font-display text-3xl text-[var(--color-ink)]">Propiedades y piezas en venta</h1>
+        <p className="max-w-2xl text-[var(--color-ink-muted)]">
+          Revisa las publicaciones disponibles en República Dominicana. Filtra por tipo, ubicación o precio para encontrar lo que buscas.
+        </p>
       </div>
 
       <CatalogFilters types={types} locations={locations} />
@@ -84,7 +134,7 @@ export default async function CatalogPage({ searchParams }: PageProps) {
             <p className="mb-4 text-sm text-[var(--color-ink-muted)]">
               {totalCount} {totalCount === 1 ? "artículo" : "artículos"}
             </p>
-            <ProductGrid products={products} />
+            <ProductGrid products={products} priorityCount={3} />
 
             {totalPages > 1 && (
               <nav

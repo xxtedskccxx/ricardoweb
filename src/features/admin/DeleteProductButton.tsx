@@ -1,22 +1,54 @@
 "use client";
 
-import { useId, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteProduct } from "@/server/actions/product";
+import { TrashIcon } from "@/components/admin/ProductActionIcons";
 
 export function DeleteProductButton({
   productId,
   productTitle,
+  iconOnly = false,
 }: {
   productId: string;
   productTitle: string;
+  iconOnly?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const headingId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const trigger = triggerRef.current;
+    dialogRef.current?.querySelector<HTMLElement>("button")?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Tab" && dialogRef.current) {
+        const items = Array.from(dialogRef.current.querySelectorAll<HTMLElement>("button"));
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (!first || !last) return;
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      (previous ?? trigger)?.focus();
+    };
+  }, [open]);
 
   function confirmDelete() {
     setError(null);
@@ -34,10 +66,13 @@ export function DeleteProductButton({
     <>
       <button
         type="button"
+        ref={triggerRef}
         onClick={() => setOpen(true)}
-        className="min-h-[44px] rounded-[var(--radius-md)] border border-[var(--color-danger)] px-4 py-2 text-sm font-medium text-[var(--color-danger)]"
+        aria-label="Eliminar producto"
+        title="Eliminar producto"
+        className={iconOnly ? iconButtonClass : "min-h-[44px] rounded-[var(--radius-pill)] border border-[var(--color-danger)] px-4 py-2 text-sm font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]/30"}
       >
-        Eliminar producto
+        {iconOnly ? <TrashIcon /> : "Eliminar producto"}
       </button>
 
       {open && (
@@ -84,3 +119,6 @@ export function DeleteProductButton({
     </>
   );
 }
+
+const iconButtonClass =
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-danger)]/30 text-[var(--color-danger)] transition-[background-color,border-color,transform] duration-[var(--duration-fast)] hover:-translate-y-px hover:border-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]/30";

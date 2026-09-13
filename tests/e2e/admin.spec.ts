@@ -93,3 +93,19 @@ test.describe("Admin — product lifecycle", () => {
     await expect(page.getByText("Disponible").first()).toBeVisible();
   });
 });
+
+test.describe("Admin — responsive layout", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("dashboard and editor fit mobile without page overflow", async ({ page }) => {
+    await login(page);
+
+    for (const route of ["/admin", "/admin/productos", "/admin/productos/nuevo"]) {
+      await page.goto(route);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      );
+      expect(overflow, `${route} should not overflow horizontally`).toBe(false);
+    }
+  });
+});

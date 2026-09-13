@@ -211,6 +211,9 @@ export async function getProductBySlug(
   if (error) throw error;
 
   if (data) {
+    if ((data as unknown as RawProduct).status === "DRAFT") {
+      return { kind: "not-found" };
+    }
     return { kind: "found", product: mapProduct(data as unknown as RawProduct) };
   }
 

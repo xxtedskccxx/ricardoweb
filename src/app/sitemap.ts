@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { siteConfig } from "@/config/site";
+import { absoluteUrl } from "@/lib/seo";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -10,13 +10,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .in("status", ["AVAILABLE", "RESERVED", "SOLD"]);
 
   const productEntries: MetadataRoute.Sitemap = (data ?? []).map((row) => ({
-    url: `${siteConfig.url}/producto/${row.slug}`,
+    url: absoluteUrl(`/producto/${row.slug}`),
     lastModified: row.updated_at,
+    changeFrequency: "weekly",
+    priority: 0.8,
   }));
 
   return [
-    { url: siteConfig.url, changeFrequency: "weekly", priority: 1 },
-    { url: `${siteConfig.url}/en-venta`, changeFrequency: "daily", priority: 0.9 },
+    { url: absoluteUrl("/"), changeFrequency: "weekly", priority: 1 },
+    { url: absoluteUrl("/en-venta"), changeFrequency: "daily", priority: 0.9 },
     ...productEntries,
   ];
 }

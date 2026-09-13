@@ -20,7 +20,7 @@ export function cloudinaryLoader({
   width,
   quality,
 }: ImageLoaderProps): string {
-  if (src.startsWith("http://") || src.startsWith("https://")) {
+  if (src.startsWith("/") || src.startsWith("http://") || src.startsWith("https://")) {
     return src;
   }
 
@@ -37,4 +37,3 @@ export function cloudinaryLoader({
 
 // next/image's `images.loaderFile` requires a default export.
 export default cloudinaryLoader;
-

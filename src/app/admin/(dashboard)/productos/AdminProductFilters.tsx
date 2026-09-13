@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useId, useState, useTransition } from "react";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos los estados" },
@@ -13,28 +14,43 @@ const STATUS_OPTIONS = [
 export function AdminProductFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchId = useId();
+  const statusId = useId();
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [pending, startTransition] = useTransition();
 
-  function setParam(key: string, value: string) {
+  const setParam = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set(key, value);
     else params.delete(key);
     params.delete("page");
-    router.push(`/admin/productos?${params.toString()}`);
-  }
+    startTransition(() => router.push(`/admin/productos?${params.toString()}`));
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    const current = searchParams.get("q") ?? "";
+    if (query === current) return;
+    const timer = window.setTimeout(() => setParam("q", query), 320);
+    return () => window.clearTimeout(timer);
+  }, [query, searchParams, setParam]);
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row">
+    <div key={searchParams.toString()} aria-busy={pending} className="flex flex-col gap-3 sm:flex-row">
+      <label htmlFor={searchId} className="sr-only">Buscar por nombre</label>
       <input
+        id={searchId}
         type="search"
-        defaultValue={searchParams.get("q") ?? ""}
-        onChange={(e) => setParam("q", e.target.value)}
-        placeholder="Buscar por título…"
-        className="h-11 flex-1 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar por nombre…"
+        className="h-11 flex-1 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20"
       />
+      <label htmlFor={statusId} className="sr-only">Filtrar por estado</label>
       <select
-        defaultValue={searchParams.get("estado") ?? ""}
+        id={statusId}
+        value={searchParams.get("estado") ?? ""}
         onChange={(e) => setParam("estado", e.target.value)}
-        className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm sm:w-48"
+        className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20 sm:w-48"
       >
         {STATUS_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>

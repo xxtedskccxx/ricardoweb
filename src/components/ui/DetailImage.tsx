@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { detailImageSrc } from "@/lib/cloudinary/image-src";
+import { isLocalMediaId, localProductImageSrc } from "@/lib/local-media";
 
 interface DetailImageProps {
   publicId: string;
@@ -9,6 +10,7 @@ interface DetailImageProps {
   priority?: boolean;
   sizes?: string;
   className?: string;
+  productType?: string;
 }
 
 /**
@@ -25,18 +27,24 @@ export function DetailImage({
   priority = false,
   sizes = "(min-width: 1024px) 60vw, 100vw",
   className,
+  productType,
 }: DetailImageProps) {
+  const localSrc = isLocalMediaId(publicId)
+    ? localProductImageSrc(productType, alt)
+    : null;
   return (
     <div
       className={`relative w-full overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-bone)] ${className ?? ""}`}
       style={{ aspectRatio: `${width} / ${height}` }}
     >
       <Image
-        src={detailImageSrc(publicId)}
+        src={localSrc ?? detailImageSrc(publicId)}
         alt={alt}
         fill
         sizes={sizes}
         priority={priority}
+        loading={priority ? "eager" : "lazy"}
+        unoptimized={Boolean(localSrc)}
         className="object-contain"
       />
     </div>

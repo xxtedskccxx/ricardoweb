@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useId } from "react";
+import { useCallback, useEffect, useId, useState, useTransition } from "react";
 
 interface CatalogFiltersProps {
   types: string[];
@@ -26,8 +26,10 @@ export function CatalogFilters({ types, locations }: CatalogFiltersProps) {
   const tipoId = useId();
   const lugarId = useId();
   const ordenId = useId();
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [pending, startTransition] = useTransition();
 
-  function setParam(key: string, value: string) {
+  const setParam = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
       params.set(key, value);
@@ -35,22 +37,29 @@ export function CatalogFilters({ types, locations }: CatalogFiltersProps) {
       params.delete(key);
     }
     params.delete("page");
-    router.push(`/en-venta?${params.toString()}`);
-  }
+    startTransition(() => router.push(`/en-venta?${params.toString()}`));
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    const current = searchParams.get("q") ?? "";
+    if (query === current) return;
+    const timer = window.setTimeout(() => setParam("q", query), 320);
+    return () => window.clearTimeout(timer);
+  }, [query, searchParams, setParam]);
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:flex-row sm:flex-wrap sm:items-end">
+    <div key={searchParams.toString()} aria-busy={pending} className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-sm)] sm:flex-row sm:flex-wrap sm:items-end">
       <div className="flex min-w-0 flex-1 flex-col gap-1 sm:min-w-[180px]">
         <label htmlFor={qId} className="text-xs font-medium text-[var(--color-ink-muted)]">
-          Buscar
+          Buscar publicaciones
         </label>
         <input
           id={qId}
           type="search"
-          defaultValue={searchParams.get("q") ?? ""}
-          onChange={(e) => setParam("q", e.target.value)}
-          placeholder="Título, tipo…"
-          className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ej. villa, Rolex, Punta Cana…"
+          className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20"
         />
       </div>
 
@@ -62,7 +71,7 @@ export function CatalogFilters({ types, locations }: CatalogFiltersProps) {
           id={tipoId}
           defaultValue={searchParams.get("tipo") ?? ""}
           onChange={(e) => setParam("tipo", e.target.value)}
-          className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm"
+          className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20"
         >
           <option value="">Todos</option>
           {types.map((type) => (
@@ -81,7 +90,7 @@ export function CatalogFilters({ types, locations }: CatalogFiltersProps) {
           id={lugarId}
           defaultValue={searchParams.get("lugar") ?? ""}
           onChange={(e) => setParam("lugar", e.target.value)}
-          className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm"
+          className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-sm focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20"
         >
           <option value="">Todas</option>
           {locations.map((location) => (

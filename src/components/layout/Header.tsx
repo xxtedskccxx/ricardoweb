@@ -5,8 +5,8 @@ import { MobileNav } from "./MobileNav";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-ivory)]/95 backdrop-blur">
-      <div className="mx-auto flex h-20 max-w-[var(--container-max)] items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 px-3 pt-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-[var(--container-max)] items-center gap-4 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-ivory)]/88 px-4 shadow-[var(--shadow-sm)] backdrop-blur-md sm:px-6">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <span
             aria-hidden="true"
@@ -31,14 +31,14 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-bone)]"
+              className="rounded-[var(--radius-pill)] px-3 py-2 text-sm font-medium text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bone)] hover:text-[var(--color-ink)]"
             >
               {item.label}
             </Link>
           ))}
         </nav>
 
-        <SearchForm className="ml-auto hidden max-w-xs flex-1 sm:block" />
+        <SearchForm id="site-search-desktop" className="ml-auto hidden max-w-xs flex-1 sm:block" />
 
         <MobileNav />
       </div>

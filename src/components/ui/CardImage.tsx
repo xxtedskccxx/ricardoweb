@@ -1,11 +1,13 @@
 import Image from "next/image";
 import { cardImageSrc } from "@/lib/cloudinary/image-src";
+import { isLocalMediaId, localProductImageSrc } from "@/lib/local-media";
 
 interface CardImageProps {
   publicId: string;
   alt: string;
   priority?: boolean;
   sizes?: string;
+  productType?: string;
 }
 
 /**
@@ -18,16 +20,23 @@ export function CardImage({
   alt,
   priority = false,
   sizes = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw",
+  productType,
 }: CardImageProps) {
+  const localSrc = isLocalMediaId(publicId)
+    ? localProductImageSrc(productType, alt)
+    : null;
   return (
     <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-bone)]">
       <Image
-        src={cardImageSrc(publicId)}
+        src={localSrc ?? cardImageSrc(publicId)}
         alt={alt}
         fill
         sizes={sizes}
         priority={priority}
-        className="object-cover transition-transform duration-[var(--duration-base)] ease-[var(--ease-out)] group-hover:scale-[1.03]"
+        loading={priority ? "eager" : "lazy"}
+        unoptimized={Boolean(localSrc)}
+        placeholder="empty"
+        className="object-cover transition-transform duration-[var(--duration-base)] ease-[var(--ease-out)] lg:group-hover:scale-[1.03]"
       />
     </div>
   );

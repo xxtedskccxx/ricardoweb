@@ -273,7 +273,7 @@ export function ImageManager({ productId, initialImages }: ImageManagerProps) {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border-strong)] px-4 py-3 text-sm font-medium text-[var(--color-ink)]"
+          className="rounded-[var(--radius-pill)] border border-dashed border-[var(--color-border-strong)] px-4 py-3 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-bone)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/25"
         >
           + Subir imágenes
         </button>
@@ -312,8 +312,9 @@ export function ImageManager({ productId, initialImages }: ImageManagerProps) {
                   </button>
                 </>
               ) : (
-                <span className="text-[var(--color-ink-muted)]">
+                <span className="flex items-center gap-2 text-[var(--color-ink-muted)]" aria-live="polite">
                   {item.status === "verifying" ? "Verificando…" : `${item.progress}%`}
+                  {item.status !== "verifying" && <span role="progressbar" aria-label={`Carga de ${item.file.name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.progress} className="h-1.5 w-20 overflow-hidden rounded-full bg-[var(--color-bone)]"><span className="block h-full rounded-full bg-[var(--color-olive)] transition-[width] duration-150" style={{ width: `${item.progress}%` }} /></span>}
                 </span>
               )}
             </li>
@@ -329,7 +330,7 @@ export function ImageManager({ productId, initialImages }: ImageManagerProps) {
 
       {images.length === 0 ? (
         <p className="text-sm text-[var(--color-ink-muted)]">
-          Aún no hay imágenes. La portada será la primera que subas.
+          Aún no hay imágenes. La primera que subas será la portada.
         </p>
       ) : (
         <DndContext
@@ -407,7 +408,7 @@ function SortableImageCard({
           {...attributes}
           {...listeners}
           aria-label="Arrastrar para reordenar"
-          className="absolute right-2 top-2 flex h-8 w-8 cursor-grab items-center justify-center rounded-full bg-[var(--color-surface)]/90 text-[var(--color-ink)] active:cursor-grabbing"
+          className="absolute right-2 top-2 flex h-11 w-11 cursor-grab items-center justify-center rounded-full bg-[var(--color-surface)]/90 text-[var(--color-ink)] shadow-[var(--shadow-sm)] active:cursor-grabbing"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
             <circle cx="9" cy="6" r="1.4" />
@@ -426,7 +427,9 @@ function SortableImageCard({
         </p>
       )}
 
+      <label htmlFor={`alt-${image.id}`} className="sr-only">Texto alternativo para la imagen</label>
       <input
+        id={`alt-${image.id}`}
         type="text"
         defaultValue={image.alt ?? ""}
         onBlur={(e) => onAltChange(e.target.value)}

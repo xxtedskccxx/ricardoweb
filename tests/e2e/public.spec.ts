@@ -18,6 +18,25 @@ test.describe("Public — homepage", () => {
     ).toBeVisible();
   });
 
+  test("card click opens the designed detail view with matching product data", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: /Villa Frente al Mar/ }).click();
+
+    await expect(page).toHaveURL(/\/producto\/villa-frente-al-mar-punta-cana/);
+    await expect(
+      page.getByRole("heading", { name: /Villa Frente al Mar/ }),
+    ).toBeVisible();
+    await expect(page.getByText("US$4,200,000")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Descripción" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Especificaciones" })).toBeVisible();
+    await expect(page.getByLabel("Mapa de ubicación")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Más propiedades en venta" }),
+    ).toBeVisible();
+  });
+
   test("no horizontal overflow at 320px", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.goto("/");
@@ -108,5 +127,35 @@ test.describe("Public — mobile navigation", () => {
     await expect(dialog.getByRole("link", { name: "En venta" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(dialog).not.toBeVisible();
+  });
+});
+
+test.describe("Public — responsive layout", () => {
+  test.use({ viewport: { width: 320, height: 700 } });
+
+  async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(false);
+  }
+
+  test("catalog fits narrow mobile screens", async ({ page }) => {
+    await page.goto("/en-venta");
+    await expect(page.getByRole("heading", { name: /Propiedades y piezas/ })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("detail page keeps content and mobile contact action in the viewport", async ({ page }) => {
+    await page.goto("/producto/villa-frente-al-mar-punta-cana");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Villa Frente al Mar");
+    await expectNoHorizontalOverflow(page);
+
+    const stickyContact = page.locator('a[href^="https://wa.me/"]').last();
+    await expect(stickyContact).toBeVisible();
+    const box = await stickyContact.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(320);
   });
 });

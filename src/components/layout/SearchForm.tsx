@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function SearchForm({ className }: { className?: string }) {
+export function SearchForm({ className, id = "site-search" }: { className?: string; id?: string }) {
   const router = useRouter();
   const [value, setValue] = useState("");
 
@@ -21,7 +21,7 @@ export function SearchForm({ className }: { className?: string }) {
       role="search"
       className={`relative ${className ?? ""}`}
     >
-      <label htmlFor="site-search" className="sr-only">
+      <label htmlFor={id} className="sr-only">
         Buscar en la colección
       </label>
       <svg
@@ -36,12 +36,12 @@ export function SearchForm({ className }: { className?: string }) {
         <path d="m21 21-4.3-4.3" strokeLinecap="round" />
       </svg>
       <input
-        id="site-search"
+        id={id}
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Buscar en la colección…"
-        className="h-11 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] pl-9 pr-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus-visible:outline-none"
+        placeholder="Buscar por nombre, tipo o ubicación…"
+        className="h-11 w-full min-w-0 rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] pl-9 pr-3 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus-visible:border-[var(--color-olive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/20"
       />
     </form>
   );

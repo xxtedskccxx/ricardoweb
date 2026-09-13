@@ -6,10 +6,12 @@
 
 export const siteConfig = {
   name: "Altamar",
-  tagline: "Mi colección personal",
+  tagline: "Colección personal",
   description:
-    "Propiedades, vehículos y artículos únicos de una colección personal en República Dominicana.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    "Aquí publico propiedades, vehículos y piezas de mi colección en República Dominicana. Si algo te interesa, escríbeme y te cuento más.",
+  heroDescription:
+    "La selección cambia. Revisa cada publicación para ver precio, ubicación y cómo contactarme.",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
   locale: "es-DO",
   country: "República Dominicana",
 
@@ -26,6 +28,9 @@ export const siteConfig = {
   },
 
   defaultCurrency: "USD" as const,
+
+  /** Cloudinary public_id for the homepage hero background photo. */
+  heroImagePublicId: "local:hero",
 } as const;
 
 export type SiteConfig = typeof siteConfig;

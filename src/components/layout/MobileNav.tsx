@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { siteConfig } from "@/config/site";
 import { SearchForm } from "./SearchForm";
 
@@ -10,6 +11,7 @@ export function MobileNav() {
   const dialogRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const headingId = useId();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!open) return;
@@ -72,12 +74,17 @@ export function MobileNav() {
         </svg>
       </button>
 
+      <AnimatePresence>
       {open && (
-        <div
+        <motion.div
           ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby={headingId}
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+          transition={{ duration: reduceMotion ? 0.12 : 0.24, ease: [0.16, 1, 0.3, 1] }}
           className="fixed inset-0 z-50 flex flex-col bg-[var(--color-ivory)] p-6"
         >
           <div className="flex items-center justify-between">
@@ -107,7 +114,7 @@ export function MobileNav() {
             </button>
           </div>
 
-          <SearchForm className="mt-6" />
+          <SearchForm id="site-search-mobile" className="mt-6" />
 
           <nav className="mt-8 flex flex-col gap-1">
             {siteConfig.nav.map((item) => (
@@ -121,8 +128,9 @@ export function MobileNav() {
               </Link>
             ))}
           </nav>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

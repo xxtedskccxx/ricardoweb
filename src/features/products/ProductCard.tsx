@@ -19,18 +19,17 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
   return (
     <Link
       href={`/producto/${product.slug}` as Route}
-      className="group flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-sm)] transition-shadow duration-[var(--duration-base)] ease-[var(--ease-out)] hover:shadow-[var(--shadow-md)]"
+      prefetch
+      aria-label={`Ver ${product.title}`}
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] duration-[var(--duration-base)] ease-[var(--ease-out)] lg:hover:-translate-y-1 lg:hover:shadow-[var(--shadow-md)] focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]"
     >
-      <div className="relative">
-        {cover ? (
-          <CardImage
-            publicId={cover.publicId}
-            alt={cover.alt ?? product.title}
-            priority={priority}
-          />
-        ) : (
-          <div className="aspect-[4/3] w-full rounded-[var(--radius-lg)] bg-[var(--color-bone)]" />
-        )}
+      <div className="relative p-2 pb-0">
+        <CardImage
+          publicId={cover?.publicId ?? "local:catalog"}
+          alt={cover?.alt ?? product.title}
+          productType={product.type}
+          priority={priority}
+        />
         <div className="absolute left-3 top-3">
           <TypeBadge type={product.type} />
         </div>
@@ -41,7 +40,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 px-1 pt-3">
+      <div className="flex flex-1 flex-col gap-1 px-4 pb-4 pt-3">
         <div className="flex items-start justify-between gap-3">
           <h3 className="font-display text-base font-medium leading-snug text-[var(--color-ink)]">
             {product.title}

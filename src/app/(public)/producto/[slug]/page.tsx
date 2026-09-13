@@ -1,3 +1,19 @@
+/*
+  DESIGN TOKENS
+  -----------------------------------------
+  Background:   #FAF8F4  Surface: #FFFFFF  Primary: #24402C
+  Text:         #1C2A24  Text Muted: #5B665F  Border: rgba(28,42,36,.1)
+
+  TYPOGRAPHY
+  -----------------------------------------
+  Display/Headline: system serif / 500  Body/Caption: system sans / 400–500
+
+  STYLE DECISION
+  -----------------------------------------
+  Style: editorial Caribbean luxury; Mood: warm, quiet, direct
+  Anti-patterns to avoid: heavy gradients, glossy cards, center-everything layouts
+*/
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -8,13 +24,26 @@ import { StickyMobileContact } from "@/features/products/StickyMobileContact";
 import { ProductGrid } from "@/features/products/ProductGrid";
 import { TypeBadge } from "@/components/ui/TypeBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PageTransition } from "@/components/motion/Reveal";
 import { formatPrice } from "@/lib/money";
 import { siteConfig } from "@/config/site";
 import { getProductBySlug, getRelatedProducts } from "@/server/queries";
+import {
+  absoluteUrl,
+  getPublicImageUrl,
+  serializeJsonLd,
+  toMetaDescription,
+} from "@/lib/seo";
+import {
+  getDetailHighlights,
+} from "@/features/products/detail-presenters";
+import { getPropertySectionTitle } from "@/lib/product-presentation";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
+
+export const dynamic = "force-dynamic";
 
 async function resolveProduct(slug: string) {
   const result = await getProductBySlug(slug);
@@ -35,30 +64,38 @@ export async function generateMetadata({
   if (result.kind !== "found") return {};
 
   const { product } = result;
-  const url = `${siteConfig.url}/producto/${product.slug}`;
-  const description =
-    product.shortDescription ?? product.description?.slice(0, 160) ?? "";
+  const url = absoluteUrl(`/producto/${product.slug}`);
+  const description = toMetaDescription(
+    product.shortDescription ?? product.description,
+    `${product.title} — ${product.type} disponible en ${siteConfig.country}.`,
+  );
   const cover = product.images[0];
+  const imageUrl = getPublicImageUrl(
+    cover?.publicId,
+    product.type,
+    product.title,
+  );
 
   return {
     title: product.title,
     description,
     alternates: { canonical: url },
+    robots: { index: true, follow: true },
     openGraph: {
       title: product.title,
       description,
       url,
       type: "website",
-      images: cover
-        ? [
-            {
-              url: `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto,w_1200,h_630,c_fill,g_auto/${cover.publicId}`,
-              width: 1200,
-              height: 630,
-            },
-          ]
-        : [],
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: product.title,
+        },
+      ],
     },
+    twitter: { card: "summary_large_image", title: product.title, description, images: [imageUrl] },
   };
 }
 
@@ -72,20 +109,28 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const product = await resolveProduct(slug);
   const related = await getRelatedProducts(product.id, product.type, 3);
-  const productUrl = `${siteConfig.url}/producto/${product.slug}`;
+  const productUrl = absoluteUrl(`/producto/${product.slug}`);
+  const highlights = getDetailHighlights(product.attributes);
 
-  const structuredData =
-    product.priceMode !== "CONTACT" && product.price !== null
-      ? {
-          "@context": "https://schema.org",
-          "@type": "Product",
-          name: product.title,
-          description: product.shortDescription ?? product.description ?? "",
-          image: product.images.map(
-            (img) =>
-              `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto/${img.publicId}`,
-          ),
-          offers: {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${productUrl}#product`,
+    name: product.title,
+    description: toMetaDescription(
+      product.shortDescription ?? product.description,
+      `${product.title} — ${product.type} disponible en ${siteConfig.country}.`,
+    ),
+    category: product.type,
+    image: product.images.length
+      ? product.images.map((img) =>
+          getPublicImageUrl(img.publicId, product.type, product.title),
+        )
+      : [getPublicImageUrl(null, product.type, product.title)],
+    url: productUrl,
+    offers:
+      product.priceMode !== "CONTACT" && product.price !== null
+        ? {
             "@type": "Offer",
             priceCurrency: product.currency,
             price: product.price,
@@ -93,18 +138,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
               OFFER_AVAILABILITY[product.status] ??
               "https://schema.org/InStock",
             url: productUrl,
-          },
-        }
-      : null;
+          }
+        : undefined,
+  };
 
   return (
-    <div className="mx-auto max-w-[var(--container-max)] px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pb-12">
-      {structuredData && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
-      )}
+    <PageTransition>
+      <div className="mx-auto max-w-[var(--container-max)] px-4 py-6 pb-28 sm:px-6 lg:px-8 lg:py-8 lg:pb-14">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }}
+      />
 
       <nav aria-label="Ruta de navegación" className="mb-6 text-sm text-[var(--color-ink-muted)]">
         <Link href="/" className="hover:text-[var(--color-ink)]">
@@ -118,31 +162,70 @@ export default async function ProductDetailPage({ params }: PageProps) {
         <span className="text-[var(--color-ink)]">{product.title}</span>
       </nav>
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_1fr]">
-        <div>
-          <Gallery images={product.images} productTitle={product.title} />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(340px,1fr)] lg:gap-10">
+        <div className="min-w-0">
+          <Gallery images={product.images} productTitle={product.title} productType={product.type} />
 
-          <div className="mt-10">
-            <h2 className="font-display text-xl text-[var(--color-ink)]">
+          <nav
+            role="tablist"
+            aria-label="Secciones de la propiedad"
+            className="mt-7 flex gap-7 overflow-x-auto border-b border-[var(--color-border)] text-sm text-[var(--color-ink-muted)]"
+          >
+            <a
+              id="tab-descripcion"
+              role="tab"
+              aria-selected="true"
+              aria-controls="descripcion"
+              href="#descripcion"
+              className="shrink-0 border-b-2 border-[var(--color-olive)] pb-3 font-medium text-[var(--color-olive)]"
+            >
               Descripción
+            </a>
+            <a
+              id="tab-especificaciones"
+              role="tab"
+              aria-selected="false"
+              aria-controls="especificaciones"
+              href="#especificaciones"
+              className="shrink-0 pb-3 hover:text-[var(--color-ink)]"
+            >
+              Especificaciones
+            </a>
+            {product.location && (
+              <a
+                id="tab-ubicacion"
+                role="tab"
+                aria-selected="false"
+                aria-controls="ubicacion"
+                href="#ubicacion"
+                className="shrink-0 pb-3 hover:text-[var(--color-ink)]"
+              >
+                Ubicación
+              </a>
+            )}
+          </nav>
+
+          <section id="descripcion" role="tabpanel" aria-labelledby="tab-descripcion" className="scroll-mt-28 pt-8">
+            <h2 className="max-w-xl font-display text-3xl leading-tight text-[var(--color-ink)] sm:text-4xl">
+              {product.shortDescription || product.title}
             </h2>
-            <p className="mt-3 whitespace-pre-line text-[var(--color-ink-muted)]">
+            <p className="mt-4 max-w-3xl whitespace-pre-line leading-7 text-[var(--color-ink-muted)]">
               {product.description || "Sin descripción disponible."}
             </p>
-          </div>
+          </section>
 
-          <div className="mt-10">
+          <section id="especificaciones" role="tabpanel" aria-labelledby="tab-especificaciones" className="scroll-mt-28 pt-10">
             <SpecsList attributes={product.attributes} />
-          </div>
+          </section>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-28 lg:self-start">
+          <div className="flex items-center justify-between gap-2">
             <TypeBadge type={product.type} />
             <StatusBadge status={product.status} />
           </div>
 
-          <h1 className="font-display text-3xl leading-tight text-[var(--color-ink)]">
+          <h1 className="font-display text-4xl leading-[1.05] text-[var(--color-ink)] lg:text-5xl">
             {product.title}
           </h1>
 
@@ -163,21 +246,58 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </p>
           )}
 
-          <p className="font-display text-2xl text-[var(--color-ink)]">
+          <p className="font-display text-3xl text-[var(--color-ink)]">
             {formatPrice(product.price, product.currency, product.priceMode)}
           </p>
 
-          <ContactCard productTitle={product.title} productUrl={productUrl} />
-        </div>
+          {highlights.length > 0 && (
+            <dl className="grid grid-cols-2 gap-x-5 gap-y-4 border-y border-[var(--color-border)] py-5 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+              {highlights.map((item) => (
+                <div key={item.icon} className="flex items-center gap-2 text-sm">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-olive)]" />
+                  <dt className="sr-only">{item.label}</dt>
+                  <dd className="whitespace-nowrap text-[var(--color-ink-muted)]"><strong className="font-medium text-[var(--color-ink)]">{item.value}</strong> {item.label}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          {product.shortDescription && (
+            <p className="border-b border-[var(--color-border)] pb-5 text-sm leading-6 text-[var(--color-ink-muted)]">
+              {product.shortDescription}
+            </p>
+          )}
+
+          <ContactCard
+            productTitle={product.title}
+            productUrl={productUrl}
+          />
+          {product.location && (
+            <section
+              id="ubicacion"
+              aria-label="Mapa de ubicación"
+              className="scroll-mt-28 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bone)]"
+            >
+              <div className="flex min-h-44 flex-col justify-between p-5">
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-sand-text)]">Ubicación</p>
+                <div className="flex items-end justify-between gap-4">
+                  <strong className="text-base font-medium text-[var(--color-ink)]">{product.location}</strong>
+                  <a className="shrink-0 text-sm font-medium text-[var(--color-olive)] hover:underline" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(product.location)}`} target="_blank" rel="noopener noreferrer">Abrir mapa ↗</a>
+                </div>
+              </div>
+            </section>
+          )}
+        </aside>
       </div>
 
       {related.length > 0 && (
         <section className="mt-16 border-t border-[var(--color-border)] pt-10">
-          <h2 className="font-display text-2xl text-[var(--color-ink)]">
-            Más productos
-          </h2>
+          <div className="flex items-end justify-between gap-4">
+            <h2 className="font-display text-3xl text-[var(--color-ink)]">{getPropertySectionTitle(product.type)}</h2>
+            <Link href="/en-venta" className="shrink-0 text-sm font-medium text-[var(--color-olive)] hover:underline">Ver más →</Link>
+          </div>
           <div className="mt-6">
-            <ProductGrid products={related} />
+            <ProductGrid products={related} priorityCount={0} />
           </div>
         </section>
       )}
@@ -185,6 +305,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <div className="lg:hidden">
         <StickyMobileContact productTitle={product.title} productUrl={productUrl} />
       </div>
-    </div>
+      </div>
+    </PageTransition>
   );
 }

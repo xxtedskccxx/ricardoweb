@@ -2,34 +2,62 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { detailImageSrc } from "@/lib/cloudinary/image-src";
+import { isLocalMediaId, localProductImageSrc } from "@/lib/local-media";
 import type { ProductImageRow } from "@/server/queries";
 
 interface GalleryProps {
   images: ProductImageRow[];
   productTitle: string;
+  productType?: string;
 }
 
-export function Gallery({ images, productTitle }: GalleryProps) {
+export function Gallery({ images, productTitle, productType }: GalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const lightboxRef = useRef<HTMLDivElement>(null);
+  const openButtonRef = useRef<HTMLButtonElement>(null);
+  const activeIndexRef = useRef(activeIndex);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   const goTo = useCallback(
     (index: number) => {
-      setActiveIndex((index + images.length) % images.length);
+      const length = images.length || 1;
+      setActiveIndex((index + length) % length);
     },
     [images.length],
   );
 
   useEffect(() => {
     if (!lightboxOpen) return;
+    const opener = openButtonRef.current;
     lightboxRef.current?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") setLightboxOpen(false);
-      if (event.key === "ArrowRight") goTo(activeIndex + 1);
-      if (event.key === "ArrowLeft") goTo(activeIndex - 1);
+      if (event.key === "ArrowRight") goTo(activeIndexRef.current + 1);
+      if (event.key === "ArrowLeft") goTo(activeIndexRef.current - 1);
+      if (event.key === "Tab" && lightboxRef.current) {
+        const focusable = Array.from(
+          lightboxRef.current.querySelectorAll<HTMLElement>("button, [tabindex]:not([tabindex='-1'])"),
+        );
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (first && last) {
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      }
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -37,44 +65,50 @@ export function Gallery({ images, productTitle }: GalleryProps) {
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
+      opener?.focus();
     };
-  }, [lightboxOpen, activeIndex, goTo]);
+  }, [lightboxOpen, goTo]);
 
-  if (images.length === 0) {
-    return (
-      <div className="flex aspect-[4/3] w-full items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-bone)] text-[var(--color-ink-muted)]">
-        Sin fotos disponibles
-      </div>
-    );
-  }
+  const media = images.length > 0 ? images : [{
+    id: "local-cover",
+    publicId: "local:cover",
+    width: 4,
+    height: 3,
+    format: "png",
+    alt: productTitle,
+    position: 0,
+  }];
 
-  const active = images[activeIndex];
+  const active = media[activeIndex];
   if (!active) return null;
 
   return (
     <div>
       <div className="relative">
         <div
-          className="relative w-full overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-bone)]"
-          style={{ aspectRatio: `${active.width} / ${active.height}` }}
+          className="relative aspect-[16/10] w-full overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-bone)]"
         >
           <button
+            ref={openButtonRef}
             type="button"
             onClick={() => setLightboxOpen(true)}
             className="absolute inset-0 h-full w-full cursor-zoom-in"
-            aria-label={`Ampliar imagen ${activeIndex + 1} de ${images.length}`}
+            aria-label={`Ampliar imagen ${activeIndex + 1} de ${media.length}`}
           >
             <Image
-              src={detailImageSrc(active.publicId)}
-              alt={active.alt ?? `${productTitle} — foto ${activeIndex + 1}`}
+              src={isLocalMediaId(active.publicId) ? localProductImageSrc(productType, productTitle) : detailImageSrc(active.publicId)}
+              alt={active.alt ?? `${productTitle} - foto ${activeIndex + 1}`}
               fill
               sizes="(min-width: 1024px) 60vw, 100vw"
-              priority={activeIndex === 0}
-              className="object-contain"
+              preload={activeIndex === 0}
+              fetchPriority={activeIndex === 0 ? "high" : undefined}
+              loading={activeIndex === 0 ? "eager" : "lazy"}
+              unoptimized={isLocalMediaId(active.publicId)}
+              className="object-cover transition-transform duration-[var(--duration-base)] ease-[var(--ease-out)] lg:hover:scale-[1.015]"
             />
           </button>
 
-          {images.length > 1 && (
+          {media.length > 1 && (
             <>
               <button
                 type="button"
@@ -97,37 +131,35 @@ export function Gallery({ images, productTitle }: GalleryProps) {
                 </svg>
               </button>
               <span className="absolute bottom-3 right-3 rounded-[var(--radius-pill)] bg-[var(--color-ink)]/70 px-2.5 py-1 text-xs font-medium text-[var(--color-ivory)]">
-                {activeIndex + 1} / {images.length}
+                {activeIndex + 1} / {media.length}
               </span>
             </>
           )}
         </div>
       </div>
 
-      {images.length > 1 && (
+      {media.length > 1 && (
         <div
-          role="tablist"
           aria-label="Miniaturas"
-          className="mt-3 flex gap-2 overflow-x-auto pb-1 no-overflow-guard"
+          className="mt-3 grid grid-cols-5 gap-2 overflow-hidden"
         >
-          {images.map((image, index) => (
+          {media.map((image, index) => (
             <button
               key={image.id}
-              role="tab"
-              aria-selected={index === activeIndex}
-              aria-label={`Ver foto ${index + 1} de ${images.length}`}
+              aria-label={`Ver foto ${index + 1} de ${media.length}`}
               onClick={() => goTo(index)}
-              className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-[var(--radius-md)] border-2 ${
+              className={`relative aspect-[4/3] min-w-0 overflow-hidden rounded-[var(--radius-md)] border-2 transition-opacity ${
                 index === activeIndex
                   ? "border-[var(--color-olive)]"
                   : "border-transparent"
               }`}
             >
               <Image
-                src={detailImageSrc(image.publicId)}
+                src={isLocalMediaId(image.publicId) ? localProductImageSrc(productType, productTitle) : detailImageSrc(image.publicId)}
                 alt=""
                 fill
                 sizes="80px"
+                unoptimized={isLocalMediaId(image.publicId)}
                 className="object-cover"
               />
             </button>
@@ -135,13 +167,18 @@ export function Gallery({ images, productTitle }: GalleryProps) {
         </div>
       )}
 
+      <AnimatePresence>
       {lightboxOpen && (
-        <div
+        <motion.div
           ref={lightboxRef}
           role="dialog"
           aria-modal="true"
-          aria-label={`${productTitle} — imagen ampliada`}
+          aria-label={`${productTitle} - imagen ampliada`}
           tabIndex={-1}
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0.12 : 0.22, ease: [0.16, 1, 0.3, 1] }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-ink)]/90 p-4"
           onClick={() => setLightboxOpen(false)}
         >
@@ -155,20 +192,26 @@ export function Gallery({ images, productTitle }: GalleryProps) {
               <path d="m6 6 12 12M18 6 6 18" />
             </svg>
           </button>
-          <div
+          <motion.div
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
+            transition={{ duration: reduceMotion ? 0.12 : 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="relative h-full max-h-[90vh] w-full max-w-5xl"
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={detailImageSrc(active.publicId)}
-              alt={active.alt ?? `${productTitle} — foto ${activeIndex + 1}`}
+              src={isLocalMediaId(active.publicId) ? localProductImageSrc(productType, productTitle) : detailImageSrc(active.publicId)}
+              alt={active.alt ?? `${productTitle} - foto ${activeIndex + 1}`}
               fill
               sizes="100vw"
+              unoptimized={isLocalMediaId(active.publicId)}
               className="object-contain"
             />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }
