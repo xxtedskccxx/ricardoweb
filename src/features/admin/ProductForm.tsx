@@ -16,6 +16,7 @@ import { formatPrice } from "@/lib/money";
 import { createDraftProduct, updateProduct } from "@/server/actions/product";
 import { AttributeEditor, type AttributeItem } from "./AttributeEditor";
 import { Button } from "@/components/ui/Button";
+import { LocationPicker } from "@/components/admin/LocationPicker";
 
 export interface ProductFormValues {
   title: string;
@@ -26,6 +27,9 @@ export interface ProductFormValues {
   currency: "USD" | "DOP";
   priceMode: "FIXED" | "NEGOTIABLE" | "CONTACT";
   location: string;
+  showLocation: boolean;
+  locationLatitude: number | null;
+  locationLongitude: number | null;
   featured: boolean;
   attributes: AttributeItem[];
 }
@@ -39,6 +43,9 @@ const EMPTY_VALUES: ProductFormValues = {
   currency: "USD",
   priceMode: "FIXED",
   location: "",
+  showLocation: false,
+  locationLatitude: null,
+  locationLongitude: null,
   featured: false,
   attributes: [],
 };
@@ -71,6 +78,15 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
     setSaved(false);
   }
 
+  function updateCoordinates(coordinates: { latitude: number; longitude: number }) {
+    setDraft((previous) => ({
+      ...previous,
+      locationLatitude: coordinates.latitude,
+      locationLongitude: coordinates.longitude,
+    }));
+    setSaved(false);
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -98,6 +114,13 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
         | "NEGOTIABLE"
         | "CONTACT",
       location: String(formData.get("location") ?? "").trim() || null,
+      showLocation: formData.get("showLocation") === "yes",
+      locationLatitude: String(formData.get("locationLatitude") ?? "").trim()
+        ? Number(formData.get("locationLatitude"))
+        : null,
+      locationLongitude: String(formData.get("locationLongitude") ?? "").trim()
+        ? Number(formData.get("locationLongitude"))
+        : null,
       featured: formData.get("featured") === "on",
       attributes: attributes.filter((a) => a.label.trim() && a.value.trim()),
     };
@@ -272,10 +295,10 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
           <SectionHeading
             title="Ubicación"
             eyebrow="Dónde está"
-            description="Añade una zona o punto de referencia para ubicarlo."
+            description="Indica una zona y decide con calma si quieres enseñarla en el anuncio."
           />
-          <div className="mt-6">
-            <Field label="Ubicación" hint="Ciudad, zona o punto de referencia.">
+          <div className="mt-6 flex flex-col gap-6">
+            <Field label="Zona o referencia" hint="Escribe una ciudad, sector o punto cercano. No hace falta poner la dirección exacta.">
               <input
                 name="location"
                 value={draft.location}
@@ -285,6 +308,67 @@ export function ProductForm({ productId, initial }: ProductFormProps) {
                 className={inputClass}
               />
             </Field>
+
+            <fieldset className="flex flex-col gap-3" aria-describedby="location-visibility-help">
+              <legend className="text-sm font-medium text-[var(--color-ink)]">¿Quieres mostrar la ubicación?</legend>
+              <p id="location-visibility-help" className="text-xs leading-relaxed text-[var(--color-ink-muted)]">
+                Si eliges «No», estos datos quedan solo para ti y nunca aparecen en la página pública.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="group relative flex min-h-16 cursor-pointer items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-4 transition-[border-color,background-color,box-shadow] duration-[var(--duration-fast)] has-[:checked]:border-[var(--color-olive)] has-[:checked]:bg-[var(--color-available-bg)] has-[:checked]:shadow-[var(--shadow-sm)]">
+                  <input
+                    type="radio"
+                    name="showLocation"
+                    value="yes"
+                    checked={draft.showLocation}
+                    onChange={() => updateDraft("showLocation", true)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-olive)]"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-[var(--color-ink)]">Sí, mostrarla</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-[var(--color-ink-muted)]">Ayuda a que las personas sepan dónde está.</span>
+                  </span>
+                </label>
+                <label className="group relative flex min-h-16 cursor-pointer items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-4 transition-[border-color,background-color,box-shadow] duration-[var(--duration-fast)] has-[:checked]:border-[var(--color-olive)] has-[:checked]:bg-[var(--color-available-bg)] has-[:checked]:shadow-[var(--shadow-sm)]">
+                  <input
+                    type="radio"
+                    name="showLocation"
+                    value="no"
+                    checked={!draft.showLocation}
+                    onChange={() => updateDraft("showLocation", false)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-olive)]"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-[var(--color-ink)]">No, mantenerla privada</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-[var(--color-ink-muted)]">Solo la verás tú mientras editas.</span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            {draft.showLocation && (
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bone)]/60 p-4 sm:p-5">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-medium text-[var(--color-ink)]">Marca un punto aproximado</h3>
+                  <p className="text-xs leading-relaxed text-[var(--color-ink-muted)]">
+                    Haz clic en el mapa para colocar el pin. Puedes moverlo; no es necesario señalar la dirección exacta.
+                  </p>
+                </div>
+                <LocationPicker
+                  value={draft.locationLatitude !== null && draft.locationLongitude !== null
+                    ? { latitude: draft.locationLatitude, longitude: draft.locationLongitude }
+                    : null}
+                  onChange={updateCoordinates}
+                />
+                <p className="mt-3 text-xs text-[var(--color-ink-muted)]" aria-live="polite">
+                  {draft.locationLatitude !== null && draft.locationLongitude !== null
+                    ? "Punto guardado. Puedes moverlo cuando quieras."
+                    : "Todavía no has elegido un punto; la zona escrita arriba seguirá siendo suficiente."}
+                </p>
+              </div>
+            )}
+            <input type="hidden" name="locationLatitude" value={draft.locationLatitude ?? ""} />
+            <input type="hidden" name="locationLongitude" value={draft.locationLongitude ?? ""} />
           </div>
         </section>
 

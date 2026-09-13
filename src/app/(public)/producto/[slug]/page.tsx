@@ -111,6 +111,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const related = await getRelatedProducts(product.id, product.type, 3);
   const productUrl = absoluteUrl(`/producto/${product.slug}`);
   const highlights = getDetailHighlights(product.attributes);
+  const hasCoordinates = product.locationLatitude !== null && product.locationLongitude !== null;
+  const hasPublicLocation = product.showLocation && Boolean(product.location || hasCoordinates);
+  const mapUrl = hasCoordinates
+    ? `https://www.openstreetmap.org/?mlat=${product.locationLatitude}&mlon=${product.locationLongitude}#map=14/${product.locationLatitude}/${product.locationLongitude}`
+    : product.location
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(product.location)}`
+      : null;
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -191,7 +198,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             >
               Especificaciones
             </a>
-            {product.location && (
+            {hasPublicLocation && (
               <a
                 id="tab-ubicacion"
                 role="tab"
@@ -229,7 +236,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             {product.title}
           </h1>
 
-          {product.location && (
+          {hasPublicLocation && product.location && (
             <p className="flex items-center gap-1.5 text-[var(--color-ink-muted)]">
               <svg
                 aria-hidden="true"
@@ -272,18 +279,30 @@ export default async function ProductDetailPage({ params }: PageProps) {
             productTitle={product.title}
             productUrl={productUrl}
           />
-          {product.location && (
+          {hasPublicLocation && (
             <section
               id="ubicacion"
               aria-label="Mapa de ubicación"
               className="scroll-mt-28 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bone)]"
             >
-              <div className="flex min-h-44 flex-col justify-between p-5">
-                <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-sand-text)]">Ubicación</p>
-                <div className="flex items-end justify-between gap-4">
-                  <strong className="text-base font-medium text-[var(--color-ink)]">{product.location}</strong>
-                  <a className="shrink-0 text-sm font-medium text-[var(--color-olive)] hover:underline" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(product.location)}`} target="_blank" rel="noopener noreferrer">Abrir mapa ↗</a>
+              {hasCoordinates ? (
+                <iframe
+                  title="Mapa de ubicación aproximada"
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${product.locationLongitude! - 0.03}%2C${product.locationLatitude! - 0.03}%2C${product.locationLongitude! + 0.03}%2C${product.locationLatitude! + 0.03}&layer=mapnik&marker=${product.locationLatitude}%2C${product.locationLongitude}`}
+                  className="h-56 w-full border-0 sm:h-64"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex min-h-44 items-center justify-center p-5 text-center text-sm text-[var(--color-ink-muted)]">
+                  <p>Mapa disponible al abrir la zona indicada.</p>
                 </div>
+              )}
+              <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:px-5">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-sand-text)]">Ubicación aproximada</p>
+                  {product.location && <strong className="mt-1 block truncate text-base font-medium text-[var(--color-ink)]">{product.location}</strong>}
+                </div>
+                {mapUrl && <a className="shrink-0 text-sm font-medium text-[var(--color-olive)] hover:underline" href={mapUrl} target="_blank" rel="noopener noreferrer">Abrir mapa ↗</a>}
               </div>
             </section>
           )}

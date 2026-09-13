@@ -1,10 +1,13 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "dev@altamar.local";
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "DevPassword123!";
+
 async function login(page: import("@playwright/test").Page) {
   await page.goto("/admin/login");
-  await page.getByLabel("Correo").fill("dev@altamar.local");
-  await page.getByLabel("Contraseña").fill("DevPassword123!");
+  await page.getByLabel("Correo").fill(ADMIN_EMAIL);
+  await page.getByLabel("Contraseña").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
 }

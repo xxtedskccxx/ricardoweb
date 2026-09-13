@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 config({ path: resolve(process.cwd(), ".env.local") });
@@ -47,12 +47,17 @@ function splitSqlStatements(source: string): string[] {
 
 async function main() {
   const sql = neon(connectionString as string);
-  const migration = await readFile(
-    resolve(process.cwd(), "db/migrations/0001_init.sql"),
-    "utf8",
-  );
-  const statements = splitSqlStatements(migration);
-  await sql.transaction((tx) => statements.map((statement) => tx.query(statement)));
+  const migrationDir = resolve(process.cwd(), "db/migrations");
+  const files = (await readdir(migrationDir))
+    .filter((file) => file.endsWith(".sql"))
+    .sort((a, b) => a.localeCompare(b, "en"));
+
+  for (const file of files) {
+    const migration = await readFile(resolve(migrationDir, file), "utf8");
+    const statements = splitSqlStatements(migration);
+    await sql.transaction((tx) => statements.map((statement) => tx.query(statement)));
+    console.log(`✓ ${file}`);
+  }
   console.log("Base de datos Neon preparada correctamente.");
 }
 

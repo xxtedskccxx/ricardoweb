@@ -26,6 +26,9 @@ interface DevProduct {
   currency: "USD" | "DOP";
   price_mode: "FIXED" | "NEGOTIABLE" | "CONTACT";
   location: string | null;
+  show_location: boolean;
+  location_latitude: number | null;
+  location_longitude: number | null;
   status: "DRAFT" | "AVAILABLE" | "RESERVED" | "SOLD";
   featured: boolean;
   homepage_position: number | null;
@@ -45,6 +48,9 @@ const DEV_PRODUCTS: DevProduct[] = [
     currency: "USD",
     price_mode: "FIXED",
     location: "Punta Cana, La Altagracia",
+    show_location: true,
+    location_latitude: 18.5601,
+    location_longitude: -68.3725,
     status: "AVAILABLE",
     featured: true,
     homepage_position: 1,
@@ -67,6 +73,9 @@ const DEV_PRODUCTS: DevProduct[] = [
     currency: "USD",
     price_mode: "NEGOTIABLE",
     location: "Santo Domingo",
+    show_location: true,
+    location_latitude: 18.4861,
+    location_longitude: -69.9312,
     status: "AVAILABLE",
     featured: true,
     homepage_position: 2,
@@ -89,6 +98,9 @@ const DEV_PRODUCTS: DevProduct[] = [
     currency: "USD",
     price_mode: "FIXED",
     location: "Santo Domingo",
+    show_location: true,
+    location_latitude: 18.4861,
+    location_longitude: -69.9312,
     status: "RESERVED",
     featured: true,
     homepage_position: 3,
@@ -110,6 +122,9 @@ const DEV_PRODUCTS: DevProduct[] = [
     currency: "USD",
     price_mode: "CONTACT",
     location: "Las Terrenas, Samaná",
+    show_location: true,
+    location_latitude: 19.3167,
+    location_longitude: -69.542,
     status: "AVAILABLE",
     featured: false,
     homepage_position: null,
@@ -130,6 +145,9 @@ const DEV_PRODUCTS: DevProduct[] = [
     currency: "USD",
     price_mode: "FIXED",
     location: "Marina Casa de Campo, La Romana",
+    show_location: true,
+    location_latitude: 18.4233,
+    location_longitude: -68.976,
     status: "SOLD",
     featured: false,
     homepage_position: null,
@@ -150,6 +168,9 @@ const DEV_PRODUCTS: DevProduct[] = [
     currency: "USD",
     price_mode: "CONTACT",
     location: null,
+    show_location: false,
+    location_latitude: null,
+    location_longitude: null,
     status: "DRAFT",
     featured: false,
     homepage_position: null,
@@ -163,9 +184,9 @@ async function main() {
 
   for (const product of DEV_PRODUCTS) {
     try {
-      await sql`INSERT INTO products (slug,title,short_description,description,type,price,currency,price_mode,location,status,featured,homepage_position,attributes,published_at)
-        VALUES (${product.slug},${product.title},${product.short_description},${product.description},${product.type},${product.price},${product.currency},${product.price_mode},${product.location},${product.status},${product.featured},${product.homepage_position},${JSON.stringify(product.attributes)}::jsonb,${product.published_at})
-        ON CONFLICT (slug) DO UPDATE SET title=excluded.title,short_description=excluded.short_description,description=excluded.description,type=excluded.type,price=excluded.price,currency=excluded.currency,price_mode=excluded.price_mode,location=excluded.location,status=excluded.status,featured=excluded.featured,homepage_position=excluded.homepage_position,attributes=excluded.attributes,published_at=excluded.published_at`;
+      await sql`INSERT INTO products (slug,title,short_description,description,type,price,currency,price_mode,location,show_location,location_latitude,location_longitude,status,featured,homepage_position,attributes,published_at)
+        VALUES (${product.slug},${product.title},${product.short_description},${product.description},${product.type},${product.price},${product.currency},${product.price_mode},${product.location},${product.show_location},${product.location_latitude},${product.location_longitude},${product.status},${product.featured},${product.homepage_position},${JSON.stringify(product.attributes)}::jsonb,${product.published_at})
+        ON CONFLICT (slug) DO UPDATE SET title=excluded.title,short_description=excluded.short_description,description=excluded.description,type=excluded.type,price=excluded.price,currency=excluded.currency,price_mode=excluded.price_mode,location=excluded.location,show_location=excluded.show_location,location_latitude=excluded.location_latitude,location_longitude=excluded.location_longitude,status=excluded.status,featured=excluded.featured,homepage_position=excluded.homepage_position,attributes=excluded.attributes,published_at=excluded.published_at`;
       console.log(`  ✓ ${product.title}`);
     } catch (error) {
       console.error(`Failed to seed "${product.slug}":`, error instanceof Error ? error.message : error);

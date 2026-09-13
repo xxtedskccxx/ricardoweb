@@ -37,9 +37,9 @@ export async function createDraftProduct(input: ProductDraftInput): Promise<Acti
   const slug = await generateUniqueSlug(parsed.data.title);
   try {
     const rows = await dbQuery<{ id: string; slug: string }>(
-      `INSERT INTO products (slug, title, short_description, description, type, price, currency, price_mode, location, featured, attributes, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,'DRAFT') RETURNING id, slug`,
-      [slug, parsed.data.title, parsed.data.shortDescription ?? null, parsed.data.description ?? null, cleanDisplayValue(parsed.data.type), parsed.data.price, parsed.data.currency, parsed.data.priceMode, parsed.data.location ? cleanDisplayValue(parsed.data.location) : null, parsed.data.featured, JSON.stringify(parsed.data.attributes)],
+      `INSERT INTO products (slug, title, short_description, description, type, price, currency, price_mode, location, show_location, location_latitude, location_longitude, featured, attributes, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,'DRAFT') RETURNING id, slug`,
+      [slug, parsed.data.title, parsed.data.shortDescription ?? null, parsed.data.description ?? null, cleanDisplayValue(parsed.data.type), parsed.data.price, parsed.data.currency, parsed.data.priceMode, parsed.data.location ? cleanDisplayValue(parsed.data.location) : null, parsed.data.showLocation, parsed.data.locationLatitude ?? null, parsed.data.locationLongitude ?? null, parsed.data.featured, JSON.stringify(parsed.data.attributes)],
     );
     const data = rows[0];
     if (!data) return { success: false, error: "No se pudo crear el borrador." };
@@ -58,7 +58,7 @@ export async function updateProduct(productId: string, input: ProductDraftInput)
   if (!existing) return { success: false, error: "Producto no encontrado." };
   const slug = existing.title === parsed.data.title ? existing.slug : await generateUniqueSlug(parsed.data.title, productId);
   try {
-    await dbQuery(`UPDATE products SET slug=$1,title=$2,short_description=$3,description=$4,type=$5,price=$6,currency=$7,price_mode=$8,location=$9,featured=$10,attributes=$11::jsonb WHERE id=$12`, [slug, parsed.data.title, parsed.data.shortDescription ?? null, parsed.data.description ?? null, cleanDisplayValue(parsed.data.type), parsed.data.price, parsed.data.currency, parsed.data.priceMode, parsed.data.location ? cleanDisplayValue(parsed.data.location) : null, parsed.data.featured, JSON.stringify(parsed.data.attributes), productId]);
+    await dbQuery(`UPDATE products SET slug=$1,title=$2,short_description=$3,description=$4,type=$5,price=$6,currency=$7,price_mode=$8,location=$9,show_location=$10,location_latitude=$11,location_longitude=$12,featured=$13,attributes=$14::jsonb WHERE id=$15`, [slug, parsed.data.title, parsed.data.shortDescription ?? null, parsed.data.description ?? null, cleanDisplayValue(parsed.data.type), parsed.data.price, parsed.data.currency, parsed.data.priceMode, parsed.data.location ? cleanDisplayValue(parsed.data.location) : null, parsed.data.showLocation, parsed.data.locationLatitude ?? null, parsed.data.locationLongitude ?? null, parsed.data.featured, JSON.stringify(parsed.data.attributes), productId]);
   } catch { return { success: false, error: "No se pudo guardar el producto." }; }
   revalidatePath("/admin/productos"); revalidatePath(`/admin/productos/${productId}`); revalidatePublicCatalog();
   if (slug !== existing.slug) revalidatePath(`/producto/${slug}`);

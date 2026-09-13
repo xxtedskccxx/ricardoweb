@@ -96,6 +96,9 @@ export default async function EditProductPage({ params }: PageProps) {
           currency: product.currency,
           priceMode: product.priceMode,
           location: product.location ?? "",
+          showLocation: product.showLocation,
+          locationLatitude: product.locationLatitude,
+          locationLongitude: product.locationLongitude,
           featured: product.featured,
           attributes,
         }}

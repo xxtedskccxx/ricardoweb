@@ -51,7 +51,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           {formatPrice(product.price, product.currency, product.priceMode)}
         </p>
 
-        {product.location && (
+        {product.showLocation && product.location && (
           <p className="flex items-center gap-1 text-sm text-[var(--color-ink-muted)]">
             <svg
               aria-hidden="true"

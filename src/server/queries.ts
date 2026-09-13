@@ -12,7 +12,8 @@ export interface ProductRow {
   id: string; slug: string; title: string; shortDescription: string | null;
   description: string | null; type: string; price: number | null;
   currency: "USD" | "DOP"; priceMode: "FIXED" | "NEGOTIABLE" | "CONTACT";
-  location: string | null; status: "DRAFT" | "AVAILABLE" | "RESERVED" | "SOLD";
+  location: string | null; showLocation: boolean; locationLatitude: number | null;
+  locationLongitude: number | null; status: "DRAFT" | "AVAILABLE" | "RESERVED" | "SOLD";
   featured: boolean; attributes: ProductAttribute[]; publishedAt: string | null;
   images: ProductImageRow[];
 }
@@ -21,7 +22,8 @@ type ProductDbRow = {
   id: string; slug: string; title: string; short_description: string | null;
   description: string | null; type: string; price: string | number | null;
   currency: ProductRow["currency"]; price_mode: ProductRow["priceMode"];
-  location: string | null; status: ProductRow["status"]; featured: boolean;
+  location: string | null; show_location: boolean; location_latitude: string | number | null;
+  location_longitude: string | number | null; status: ProductRow["status"]; featured: boolean;
   attributes: unknown; published_at: string | Date | null;
   image_id: string | null; public_id: string | null; image_width: number | null;
   image_height: number | null; image_format: string | null; image_alt: string | null;
@@ -40,6 +42,8 @@ function mapProducts(rows: ProductDbRow[]): ProductRow[] {
         shortDescription: row.short_description, description: row.description,
         type: row.type, price: row.price === null ? null : Number(row.price),
         currency: row.currency, priceMode: row.price_mode, location: row.location,
+        showLocation: row.show_location, locationLatitude: row.location_latitude === null ? null : Number(row.location_latitude),
+        locationLongitude: row.location_longitude === null ? null : Number(row.location_longitude),
         status: row.status, featured: row.featured,
         attributes: Array.isArray(row.attributes) ? row.attributes as ProductAttribute[] : [],
         publishedAt: iso(row.published_at), images: [],
@@ -55,7 +59,8 @@ function mapProducts(rows: ProductDbRow[]): ProductRow[] {
 
 const PRODUCT_FIELDS = `
   p.id, p.slug, p.title, p.short_description, p.description, p.type,
-  p.price, p.currency, p.price_mode, p.location, p.status, p.featured,
+  p.price, p.currency, p.price_mode, p.location, p.show_location,
+  p.location_latitude, p.location_longitude, p.status, p.featured,
   p.attributes, p.published_at, pi.id AS image_id, pi.public_id,
   pi.width AS image_width, pi.height AS image_height, pi.format AS image_format,
   pi.alt AS image_alt, pi.position AS image_position
@@ -83,7 +88,7 @@ function catalogWhere(filters: ProductFilterInput) {
   const add = (value: unknown) => { params.push(value); return `$${params.length}`; };
   if (filters.q) { const needle = add(`%${escapeLike(filters.q)}%`); conditions.push(`(p.title ILIKE ${needle} ESCAPE '\\' OR p.short_description ILIKE ${needle} ESCAPE '\\' OR p.type ILIKE ${needle} ESCAPE '\\')`); }
   if (filters.tipo) conditions.push(`p.type_normalized = ${add(normalizeKey(filters.tipo))}`);
-  if (filters.lugar) conditions.push(`p.location_normalized = ${add(normalizeKey(filters.lugar))}`);
+  if (filters.lugar) conditions.push(`p.show_location = true AND p.location_normalized = ${add(normalizeKey(filters.lugar))}`);
   if (filters.min !== undefined) conditions.push(`p.price >= ${add(filters.min)}`);
   if (filters.max !== undefined) conditions.push(`p.price <= ${add(filters.max)}`);
   return { where: conditions.join(" AND "), params };
@@ -119,7 +124,7 @@ export async function getRelatedProducts(excludeId: string, type: string, limit 
 }
 
 export async function getDistinctLocations(): Promise<string[]> {
-  const rows = await dbQuery<{ location: string | null }>("SELECT location FROM products WHERE status IN ('AVAILABLE', 'RESERVED') AND location IS NOT NULL");
+  const rows = await dbQuery<{ location: string | null }>("SELECT location FROM products WHERE status IN ('AVAILABLE', 'RESERVED') AND show_location = true AND location IS NOT NULL");
   const seen = new Map<string, string>();
   for (const row of rows) if (row.location && !seen.has(normalizeKey(row.location))) seen.set(normalizeKey(row.location), row.location);
   return Array.from(seen.values()).sort((a, b) => a.localeCompare(b, "es"));

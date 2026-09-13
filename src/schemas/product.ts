@@ -43,8 +43,23 @@ export const productDraftSchema = z
     currency: z.enum(CURRENCY),
     priceMode: z.enum(PRICE_MODE),
     location: z.string().trim().max(120).optional().nullable(),
+    showLocation: z.boolean().default(false),
+    locationLatitude: z.number().min(-90).max(90).nullable().optional(),
+    locationLongitude: z.number().min(-180).max(180).nullable().optional(),
     featured: z.boolean(),
     attributes: attributesSchema,
+  })
+  .superRefine((data, ctx) => {
+    const hasLatitude = data.locationLatitude != null;
+    const hasLongitude = data.locationLongitude != null;
+
+    if (hasLatitude !== hasLongitude) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Selecciona un punto completo en el mapa",
+        path: [hasLatitude ? "locationLongitude" : "locationLatitude"],
+      });
+    }
   })
   .refine((data) => data.priceMode === "CONTACT" || data.price !== null, {
     message: "El precio es obligatorio salvo en modo 'A consultar'",

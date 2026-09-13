@@ -92,6 +92,54 @@ test.describe("Admin — product lifecycle", () => {
     await page.getByRole("button", { name: "Marcar disponible" }).click();
     await expect(page.getByText("Disponible").first()).toBeVisible();
   });
+
+  test("location privacy choice keeps the map hidden until it is requested", async ({ page }) => {
+    await login(page);
+    await page.goto("/admin/productos/nuevo");
+
+    const privateChoice = page.getByRole("radio", { name: /No, mantenerla privada/ });
+    const publicChoice = page.getByRole("radio", { name: /Sí, mostrarla/ });
+    await expect(privateChoice).toBeChecked();
+    await expect(page.getByRole("region", { name: "Selector de ubicación" })).not.toBeVisible();
+
+    await publicChoice.check();
+    await expect(page.getByRole("region", { name: "Selector de ubicación" })).toBeVisible();
+    const map = page.locator(".leaflet-container");
+    await expect(map).toBeVisible();
+    const mapBounds = await map.boundingBox();
+    if (mapBounds) {
+      // The editor save bar is sticky at the bottom; use the clear upper area
+      // of the map for a reliable click in short desktop viewports.
+      await page.mouse.click(mapBounds.x + mapBounds.width / 2, mapBounds.y + 64);
+      await expect(page.locator('input[name="locationLatitude"]')).not.toHaveValue("");
+    }
+    await expect(page.getByText(/Marca un punto aproximado/)).toBeVisible();
+  });
+
+  test("saves the chosen map point with the product", async ({ page }) => {
+    await login(page);
+    await page.goto("/admin/productos/nuevo");
+    await page.getByLabel("Título").fill("Producto con ubicación E2E");
+    await page.getByLabel("Tipo").fill("Artículo");
+    await page.getByLabel("Precio").fill("100");
+    await page.getByRole("radio", { name: /Sí, mostrarla/ }).check();
+
+    const map = page.locator(".leaflet-container");
+    await expect(map).toBeVisible();
+    const mapBounds = await map.boundingBox();
+    if (mapBounds) {
+      await page.mouse.click(mapBounds.x + mapBounds.width / 2, mapBounds.y + 64);
+    }
+    await expect(page.locator('input[name="locationLatitude"]')).not.toHaveValue("");
+    await page.getByRole("button", { name: "Crear borrador" }).click();
+    await expect(page).toHaveURL(/\/admin\/productos\/[0-9a-f-]+$/, { timeout: 15_000 });
+    await expect(page.getByRole("radio", { name: /Sí, mostrarla/ })).toBeChecked();
+    await expect(page.locator('input[name="locationLongitude"]')).not.toHaveValue("");
+
+    await page.getByRole("button", { name: "Eliminar producto" }).click();
+    await page.getByRole("button", { name: "Sí, eliminar" }).click();
+    await expect(page).toHaveURL(/\/admin\/productos$/);
+  });
 });
 
 test.describe("Admin — responsive layout", () => {

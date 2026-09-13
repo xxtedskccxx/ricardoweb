@@ -60,6 +60,43 @@ describe("productDraftSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts an optional public location and a coordinate pair", () => {
+    const result = productDraftSchema.safeParse({
+      ...base,
+      price: 850000,
+      priceMode: "FIXED",
+      showLocation: true,
+      locationLatitude: 18.5601,
+      locationLongitude: -68.3725,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects coordinates outside the map bounds", () => {
+    const result = productDraftSchema.safeParse({
+      ...base,
+      price: 850000,
+      priceMode: "FIXED",
+      locationLatitude: 91,
+      locationLongitude: -68.3725,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a coordinate without its pair", () => {
+    const result = productDraftSchema.safeParse({
+      ...base,
+      price: 850000,
+      priceMode: "FIXED",
+      locationLatitude: 18.5601,
+      locationLongitude: null,
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("publicationContractSchema", () => {
