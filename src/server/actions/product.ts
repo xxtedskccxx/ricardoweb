@@ -84,7 +84,18 @@ export async function setProductStatus(productId: string, action: keyof typeof S
   await requireAdmin(); const nextStatus = STATUS_TRANSITIONS[action];
   const rows = await dbQuery<{ slug: string; published_at: string | Date | null }>("SELECT slug,published_at FROM products WHERE id=$1 LIMIT 1", [productId]);
   const product = rows[0]; if (!product) return { success: false, error: "Producto no encontrado." };
-  try { await dbQuery(`UPDATE products SET status=$1, published_at=CASE WHEN $1='DRAFT' THEN published_at WHEN published_at IS NULL THEN now() ELSE published_at END WHERE id=$2`, [nextStatus, productId]); } catch { return { success: false, error: "No se pudo cambiar el estado del producto." }; }
+  // Keep the status value and the publication check on separate parameters.
+  // Reusing the same PostgreSQL placeholder in an enum assignment and a text
+  // comparison makes Neon/Postgres infer conflicting types (42P08).
+  try {
+    await dbQuery(
+      `UPDATE products
+       SET status=$1::product_status,
+           published_at=CASE WHEN $2='DRAFT' THEN published_at WHEN published_at IS NULL THEN now() ELSE published_at END
+       WHERE id=$3`,
+      [nextStatus, nextStatus, productId],
+    );
+  } catch { return { success: false, error: "No se pudo cambiar el estado del producto." }; }
   revalidatePath("/admin/productos"); revalidatePath(`/admin/productos/${productId}`); revalidatePath(`/producto/${product.slug}`); revalidatePublicCatalog();
   return { success: true };
 }
