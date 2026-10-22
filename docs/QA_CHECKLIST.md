@@ -31,7 +31,7 @@ Cover logic such as:
 
 ## Database/security tests
 
-Against local/real Supabase when possible:
+Against a Neon development branch:
 
 - [ ] anon cannot read DRAFT
 - [ ] anon cannot write

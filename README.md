@@ -123,8 +123,14 @@ whichever row sits at `position = 0`; reordering (including "make cover")
 goes through an atomic Postgres RPC so a partial failure can never leave
 duplicate/skipped positions.
 
-## Deployment (not yet done — see docs/IMPLEMENTATION_STATE.md)
+## Deployment
 
-Intended target: Vercel (Next.js) + Neon Postgres + Cloudinary. Configure the
-same variables from `.env.example` in Vercel; no database credentials are
-committed to this repository.
+Vercel (Next.js) + Neon Postgres + Cloudinary. Step-by-step guide:
+`docs/DEPLOYMENT.md`. No database credentials are committed to this
+repository.
+
+## Maintenance
+
+```bash
+pnpm media:cleanup   # retry Cloudinary deletes that failed at the time
+```

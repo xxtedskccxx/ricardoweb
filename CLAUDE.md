@@ -88,6 +88,7 @@ pnpm build                # production build
 pnpm db:migrate           # apply db/migrations to DATABASE_URL
 pnpm seed                 # insert dev-only demo products (titled "[DEV]")
 pnpm admin:create <email> <password>   # the only way to create an admin account
+pnpm media:cleanup        # drain media_cleanup_queue (failed Cloudinary deletes)
 ```
 
 **Port note (this dev machine only):** ports 3000, 3010, and 3100 are

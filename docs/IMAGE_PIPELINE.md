@@ -42,7 +42,7 @@ Never trust filename extensions or client-reported MIME as authority.
 Never expose:
 
 - Cloudinary API secret
-- Supabase service-role key
+- `DATABASE_URL` and `AUTH_SECRET`
 - privileged signatures
 
 in public/browser code.

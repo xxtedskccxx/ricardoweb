@@ -1,6 +1,6 @@
 Build ALTAVISTA from scratch as a production-quality, responsive single-owner sales catalog.
 
-The completed system must include a premium public landing based on the supplied visual reference, unlimited mixed inventory, catalog/search/filtering, SEO-friendly product detail pages, responsive image galleries, WhatsApp/phone/email contact actions, secure `/admin` authentication, product CRUD, drafts/available/reserved/sold states, arbitrary ordered product specifications, multi-image upload with progress/retry/reorder/cover selection, automatic responsive image optimization, Supabase PostgreSQL/Auth with RLS, Cloudinary media handling, responsive design, accessibility, SEO, error states, security, and automated testing.
+The completed system must include a premium public landing based on the supplied visual reference, unlimited mixed inventory, catalog/search/filtering, SEO-friendly product detail pages, responsive image galleries, WhatsApp/phone/email contact actions, secure `/admin` authentication, product CRUD, drafts/available/reserved/sold states, arbitrary ordered product specifications, multi-image upload with progress/retry/reorder/cover selection, automatic responsive image optimization, Neon PostgreSQL with signed-cookie admin auth, Cloudinary media handling, responsive design, accessibility, SEO, error states, security, and automated testing.
 
 There is NO six-product limit. The owner can publish arbitrary inventory.
 

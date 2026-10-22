@@ -42,7 +42,16 @@ The database role is never sent to the browser.
 
 ## Draft leakage
 
-Draft visibility must be blocked at database level, not merely by remembering to add `where status != DRAFT` in app code.
+Every public SQL statement filters on an explicit allow-list of public statuses
+(`status IN ('AVAILABLE', 'RESERVED'[, 'SOLD'])`), and the single-product lookup
+returns not-found for DRAFT. Since the move from Supabase to Neon there is no
+row-level security, so this filter in `src/server/queries.ts` is the boundary:
+any new public query must copy it.
+
+## Login throttling
+
+Failed logins are recorded in `login_attempts`. Five failures for one email or
+twenty from one IP within 15 minutes block further attempts for that window.
 
 ## Server validation
 
@@ -125,7 +134,9 @@ Do not allow accidental destructive actions through ambiguous UI.
 
 ## Status transitions
 
-Define valid transitions and enforce them server-side.
+Define valid transitions and enforce them server-side
+(`src/lib/status-transitions.ts`). DRAFT can only leave through
+`publishProduct()`; a published product can't lose its last image.
 
 Do not trust a client-submitted arbitrary status.
 

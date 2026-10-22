@@ -5,6 +5,8 @@ import { z } from "zod";
 import { dbQuery } from "@/lib/db";
 import { requireAdmin } from "@/server/auth";
 import { slugify } from "@/lib/slug";
+import { canTransition, type ProductStatus } from "@/lib/status-transitions";
+import { destroyCloudinaryResource } from "@/lib/cloudinary/verify";
 import { cleanDisplayValue } from "@/lib/normalize";
 import { productDraftSchema, publicationContractSchema, type ProductDraftInput } from "@/schemas/product";
 
@@ -82,8 +84,11 @@ const STATUS_TRANSITIONS = { unpublish: "DRAFT", available: "AVAILABLE", reserve
 export async function setProductStatus(productId: string, action: keyof typeof STATUS_TRANSITIONS): Promise<ActionResult> {
   const id = idSchema.safeParse(productId); if (!id.success) return { success: false, error: "Producto no encontrado." };
   await requireAdmin(); const nextStatus = STATUS_TRANSITIONS[action];
-  const rows = await dbQuery<{ slug: string; published_at: string | Date | null }>("SELECT slug,published_at FROM products WHERE id=$1 LIMIT 1", [productId]);
+  const rows = await dbQuery<{ slug: string; status: ProductStatus; published_at: string | Date | null }>("SELECT slug,status,published_at FROM products WHERE id=$1 LIMIT 1", [productId]);
   const product = rows[0]; if (!product) return { success: false, error: "Producto no encontrado." };
+  if (!canTransition(product.status, nextStatus)) {
+    return { success: false, error: product.status === "DRAFT" ? "Usa «Publicar» para hacer público un borrador." : "Ese cambio de estado no está permitido." };
+  }
   // Keep the status value and the publication check on separate parameters.
   // Reusing the same PostgreSQL placeholder in an enum assignment and a text
   // comparison makes Neon/Postgres infer conflicting types (42P08).
@@ -106,7 +111,13 @@ export async function deleteProduct(productId: string): Promise<ActionResult> {
   const rows = await dbQuery<{ slug: string; public_id: string }>("SELECT p.slug, pi.public_id FROM products p LEFT JOIN product_images pi ON pi.product_id=p.id WHERE p.id=$1", [productId]);
   if (!rows[0]) return { success: false, error: "Producto no encontrado." };
   try { await dbQuery("DELETE FROM products WHERE id=$1", [productId]); } catch { return { success: false, error: "No se pudo eliminar el producto." }; }
-  for (const row of rows) if (row.public_id) { try { await dbQuery("INSERT INTO media_cleanup_queue (public_id) VALUES ($1) ON CONFLICT (public_id) DO NOTHING", [row.public_id]); } catch { /* cleanup can be retried separately */ } }
+  for (const row of rows) {
+    if (!row.public_id) continue;
+    let destroyed = false;
+    try { destroyed = await destroyCloudinaryResource(row.public_id); } catch { destroyed = false; }
+    // Anything Cloudinary didn't confirm is retried by `pnpm media:cleanup`.
+    if (!destroyed) { try { await dbQuery("INSERT INTO media_cleanup_queue (public_id) VALUES ($1) ON CONFLICT (public_id) DO NOTHING", [row.public_id]); } catch { /* cleanup can be retried separately */ } }
+  }
   revalidatePath("/admin/productos"); revalidatePublicCatalog(); revalidatePath(`/producto/${rows[0].slug}`);
   return { success: true };
 }
