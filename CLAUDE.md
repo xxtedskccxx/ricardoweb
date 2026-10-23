@@ -22,7 +22,7 @@ Never introduce any of those without an explicit new request.
   a feature isn't built, the control doesn't exist.
 - **Publication is server-enforced.** `publishProduct()` in
   `src/server/actions/product.ts` validates the full contract (title, slug,
-  type, description ≥20 chars, valid price config, ≥1 image, cover image)
+  type, non-empty description, valid price config, ≥1 image, cover image)
   server-side. A disabled frontend button is never the only gate.
 - **Drafts are invisible publicly** through every public SQL query
   (`status <> 'DRAFT'`), not just an application filter.

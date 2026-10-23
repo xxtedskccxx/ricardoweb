@@ -77,7 +77,7 @@ export const publicationContractSchema = z.object({
   title: z.string().trim().min(3).max(140),
   slug: z.string().trim().min(3),
   type: z.string().trim().min(2),
-  description: z.string().trim().min(20, "Añade una descripción más completa"),
+  description: z.string().trim().min(1, "Añade una descripción"),
   priceMode: z.enum(PRICE_MODE),
   price: z.number().nonnegative().nullable(),
   imageCount: z.number().int().min(1, "Sube al menos una imagen"),
