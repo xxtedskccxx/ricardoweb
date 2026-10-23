@@ -72,3 +72,25 @@ cada servicio; no se suben credenciales al repositorio.
   IP) el acceso se bloquea 15 minutos.
 - Antes de aplicar una migración nueva en producción, pruébala en la rama
   `dev` de Neon.
+
+## 6. Respaldos de la base de datos
+
+`.github/workflows/backup.yml` hace un `pg_dump` cifrado cada día (03:00,
+hora de Santo Domingo) y lo guarda 30 días como *artifact* en GitHub
+(pestaña **Actions → Database backup**). También se puede lanzar a mano con
+**Run workflow**.
+
+Requiere dos *secrets* del repositorio (**Settings → Secrets and variables →
+Actions**): `DATABASE_URL` (la de producción) y `BACKUP_PASSPHRASE`. Sin la
+passphrase los respaldos no se pueden abrir: guárdala en un lugar seguro.
+
+Restaurar (con Docker; reemplaza los valores entre `<>`):
+
+```bash
+gpg --decrypt --output db.dump db.dump.gpg
+docker run --rm -i -e DATABASE_URL="<cadena-de-la-base-destino>" postgres:18 \
+  sh -c 'pg_restore --clean --if-exists --no-owner --dbname="$DATABASE_URL"' < db.dump
+```
+
+Restaura primero en una rama nueva de Neon para revisar antes de tocar
+producción. Las imágenes viven en Cloudinary y no forman parte de este respaldo.
