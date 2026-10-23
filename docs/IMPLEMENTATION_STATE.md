@@ -25,14 +25,22 @@ simplified admin product form added afterwards.
 - GitHub Actions CI: typecheck, lint, unit tests, production build.
 - Deployment guide: `docs/DEPLOYMENT.md`.
 
-## Blockers (need the owner)
+## Production (2026-10-22)
 
-- Real contact details (WhatsApp, phone, email, Instagram).
-- Production Neon project, Cloudinary production folder, Vercel project and
-  domain — see `docs/DEPLOYMENT.md`.
-- Real inventory and photos to replace the `[DEV]` seed products.
+- Live at https://ricardoweb-two.vercel.app (Vercel Hobby), Neon project
+  `ricardoweb` (Postgres 18, aws-us-east-1), Cloudinary folder `altamar/prod`.
+- Repository: github.com/xxtedskccxx/ricardoweb. Every push to `main`
+  deploys automatically through the Vercel GitHub integration.
+- Daily encrypted database backup: `.github/workflows/backup.yml`.
+- Publishing now only requires a non-empty description.
+
+## Pending (need the owner)
+
+- Contact email (WhatsApp/phone already set to 829-672-7363).
+- Custom domain, once the client chooses a name.
+- Real inventory.
 
 ## Verification still pending
 
-- `pnpm e2e` has not been re-run against Neon since the map/form commits and
-  this pass; run it against a Neon development branch before launch.
+- `pnpm e2e` has not been re-run against Neon since the map/form commits;
+  run it against a Neon development branch, never production.
