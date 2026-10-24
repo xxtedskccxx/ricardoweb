@@ -33,10 +33,11 @@ simplified admin product form added afterwards.
   deploys automatically through the Vercel GitHub integration.
 - Daily encrypted database backup: `.github/workflows/backup.yml`.
 - Publishing now only requires a non-empty description.
+- Contact: WhatsApp/phone 829-672-7363, email ricardo-dlc@outlook.com
+  (Vercel env vars; `NEXT_PUBLIC_*` changes need a redeploy).
 
 ## Pending (need the owner)
 
-- Contact email (WhatsApp/phone already set to 829-672-7363).
 - Custom domain, once the client chooses a name.
 - Real inventory.
 
