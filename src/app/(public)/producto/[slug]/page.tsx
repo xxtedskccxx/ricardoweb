@@ -28,6 +28,7 @@ import { PageTransition } from "@/components/motion/Reveal";
 import { formatPrice } from "@/lib/money";
 import { siteConfig } from "@/config/site";
 import { getProductBySlug, getRelatedProducts } from "@/server/queries";
+import { hasAdminSessionCookie } from "@/server/auth";
 import {
   absoluteUrl,
   getPublicImageUrl,
@@ -108,7 +109,10 @@ const OFFER_AVAILABILITY: Record<string, string> = {
 export default async function ProductDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const product = await resolveProduct(slug);
-  const related = await getRelatedProducts(product.id, product.type, 3);
+  const [related, isAdmin] = await Promise.all([
+    getRelatedProducts(product.id, product.type, 3),
+    hasAdminSessionCookie(),
+  ]);
   const productUrl = absoluteUrl(`/producto/${product.slug}`);
   const highlights = getDetailHighlights(product.attributes);
   const hasCoordinates = product.locationLatitude !== null && product.locationLongitude !== null;
@@ -169,64 +173,28 @@ export default async function ProductDetailPage({ params }: PageProps) {
         <span className="text-[var(--color-ink)]">{product.title}</span>
       </nav>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(340px,1fr)] lg:gap-10">
-        <div className="min-w-0">
-          <Gallery images={product.images} productTitle={product.title} productType={product.type} />
-
-          <nav
-            role="tablist"
-            aria-label="Secciones de la propiedad"
-            className="mt-7 flex gap-7 overflow-x-auto border-b border-[var(--color-border)] text-sm text-[var(--color-ink-muted)]"
+      {isAdmin && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 shadow-[var(--shadow-sm)]">
+          <p className="text-sm text-[var(--color-ink-muted)]">
+            Estás viendo tu publicación como la ven los compradores.
+          </p>
+          <Link
+            href={`/admin/productos/${product.id}`}
+            className="inline-flex min-h-11 items-center rounded-[var(--radius-pill)] bg-[var(--color-olive)] px-5 text-sm font-medium text-[var(--color-ivory)] transition-opacity hover:opacity-90"
           >
-            <a
-              id="tab-descripcion"
-              role="tab"
-              aria-selected="true"
-              aria-controls="descripcion"
-              href="#descripcion"
-              className="shrink-0 border-b-2 border-[var(--color-olive)] pb-3 font-medium text-[var(--color-olive)]"
-            >
-              Descripción
-            </a>
-            <a
-              id="tab-especificaciones"
-              role="tab"
-              aria-selected="false"
-              aria-controls="especificaciones"
-              href="#especificaciones"
-              className="shrink-0 pb-3 hover:text-[var(--color-ink)]"
-            >
-              Especificaciones
-            </a>
-            {hasPublicLocation && (
-              <a
-                id="tab-ubicacion"
-                role="tab"
-                aria-selected="false"
-                aria-controls="ubicacion"
-                href="#ubicacion"
-                className="shrink-0 pb-3 hover:text-[var(--color-ink)]"
-              >
-                Ubicación
-              </a>
-            )}
-          </nav>
+            Editar publicación
+          </Link>
+        </div>
+      )}
 
-          <section id="descripcion" role="tabpanel" aria-labelledby="tab-descripcion" className="scroll-mt-28 pt-8">
-            <h2 className="max-w-xl font-display text-3xl leading-tight text-[var(--color-ink)] sm:text-4xl">
-              {product.shortDescription || product.title}
-            </h2>
-            <p className="mt-4 max-w-3xl whitespace-pre-line leading-7 text-[var(--color-ink-muted)]">
-              {product.description || "Sin descripción disponible."}
-            </p>
-          </section>
-
-          <section id="especificaciones" role="tabpanel" aria-labelledby="tab-especificaciones" className="scroll-mt-28 pt-10">
-            <SpecsList attributes={product.attributes} />
-          </section>
+      {/* Mobile order: photos → title/price/contact → description. On desktop
+          the summary column spans both rows on the right and stays sticky. */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(340px,1fr)] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:gap-y-0">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+          <Gallery images={product.images} productTitle={product.title} productType={product.type} />
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-28 lg:self-start">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-28 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <div className="flex items-center justify-between gap-2">
             <TypeBadge type={product.type} />
             <StatusBadge status={product.status} />
@@ -307,6 +275,60 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </section>
           )}
         </aside>
+
+        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+          <nav
+            role="tablist"
+            aria-label="Secciones de la propiedad"
+            className="mt-7 flex gap-7 overflow-x-auto border-b border-[var(--color-border)] text-sm text-[var(--color-ink-muted)]"
+          >
+            <a
+              id="tab-descripcion"
+              role="tab"
+              aria-selected="true"
+              aria-controls="descripcion"
+              href="#descripcion"
+              className="shrink-0 border-b-2 border-[var(--color-olive)] pb-3 font-medium text-[var(--color-olive)]"
+            >
+              Descripción
+            </a>
+            <a
+              id="tab-especificaciones"
+              role="tab"
+              aria-selected="false"
+              aria-controls="especificaciones"
+              href="#especificaciones"
+              className="shrink-0 pb-3 hover:text-[var(--color-ink)]"
+            >
+              Especificaciones
+            </a>
+            {hasPublicLocation && (
+              <a
+                id="tab-ubicacion"
+                role="tab"
+                aria-selected="false"
+                aria-controls="ubicacion"
+                href="#ubicacion"
+                className="shrink-0 pb-3 hover:text-[var(--color-ink)]"
+              >
+                Ubicación
+              </a>
+            )}
+          </nav>
+
+          <section id="descripcion" role="tabpanel" aria-labelledby="tab-descripcion" className="scroll-mt-28 pt-8">
+            <h2 className="max-w-xl font-display text-3xl leading-tight text-[var(--color-ink)] sm:text-4xl">
+              {product.shortDescription || product.title}
+            </h2>
+            <p className="mt-4 max-w-3xl whitespace-pre-line leading-7 text-[var(--color-ink-muted)]">
+              {product.description || "Sin descripción disponible."}
+            </p>
+          </section>
+
+          <section id="especificaciones" role="tabpanel" aria-labelledby="tab-especificaciones" className="scroll-mt-28 pt-10">
+            <SpecsList attributes={product.attributes} />
+          </section>
+        </div>
       </div>
 
       {related.length > 0 && (

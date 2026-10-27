@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { siteConfig } from "@/config/site";
 import { SearchForm } from "./SearchForm";
 
-export function MobileNav() {
+export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const headingId = useId();
   const reduceMotion = useReducedMotion();
+  // false during SSR and hydration, true afterwards — portals need <body>.
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
   useEffect(() => {
     if (!open) return;
@@ -74,6 +77,10 @@ export function MobileNav() {
         </svg>
       </button>
 
+      {/* Portal to <body>: the header's backdrop-filter makes it the containing
+          block for fixed descendants, which would trap this overlay inside
+          the header bar instead of covering the screen. */}
+      {mounted && createPortal(
       <AnimatePresence>
       {open && (
         <motion.div
@@ -127,10 +134,21 @@ export function MobileNav() {
                 {item.label}
               </Link>
             ))}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="mt-2 min-h-[44px] rounded-[var(--radius-md)] bg-[var(--color-olive)] px-3 py-3 text-base font-medium text-[var(--color-ivory)]"
+              >
+                Admin
+              </Link>
+            )}
           </nav>
         </motion.div>
       )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body,
+      )}
     </div>
   );
 }

@@ -4,20 +4,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "Panel" },
-  { href: "/admin/productos", label: "Productos" },
+  { href: "/admin", label: "Resumen" },
+  { href: "/admin/productos", label: "Mis productos" },
+  { href: "/admin/productos/nuevo", label: "+ Nuevo" },
 ] as const;
 
 export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Navegación del panel" className="mt-5 overflow-x-auto lg:mt-10">
-      <div className="flex min-w-max gap-1 lg:flex-col">
+    <nav aria-label="Administración" className="min-w-0 sm:flex-1">
+      <div className="grid grid-cols-3 items-center gap-1 sm:flex">
+        <span className="hidden px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-sand-text)] sm:inline">
+          Admin
+        </span>
         {NAV_ITEMS.map((item) => {
           const active =
-            pathname === item.href ||
-            (item.href !== "/admin" && pathname.startsWith(item.href));
+            item.href === "/admin/productos"
+              ? pathname.startsWith(item.href) && pathname !== "/admin/productos/nuevo"
+              : pathname === item.href;
 
           return (
             <Link
@@ -25,22 +30,13 @@ export function AdminNav() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={[
-                "group flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium transition-[background-color,color,transform] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
+                "flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--radius-pill)] px-2 text-sm sm:px-4 font-medium transition-[background-color,color] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
                 active
-                  ? "bg-[var(--color-olive)] text-[var(--color-ivory)] shadow-[0_8px_18px_rgba(36,64,44,.12)]"
-                  : "text-[var(--color-ink-muted)] hover:-translate-y-px hover:bg-[var(--color-bone)] hover:text-[var(--color-ink)]",
+                  ? "bg-[var(--color-olive)] text-[var(--color-ivory)]"
+                  : "text-[var(--color-ink-muted)] hover:bg-[var(--color-bone)] hover:text-[var(--color-ink)]",
               ].join(" ")}
-              >
-              <span
-                aria-hidden="true"
-                className={[
-                  "h-2 w-2 shrink-0 rounded-full transition-colors",
-                  active
-                    ? "bg-[var(--color-sand-soft)]"
-                    : "bg-[var(--color-border-strong)] group-hover:bg-[var(--color-olive)]",
-                ].join(" ")}
-              />
-              <span>{item.label}</span>
+            >
+              {item.label}
             </Link>
           );
         })}

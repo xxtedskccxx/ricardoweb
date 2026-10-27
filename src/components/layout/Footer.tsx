@@ -48,7 +48,10 @@ export function Footer() {
         </nav>
 
         <p className="text-sm text-[var(--color-ink-muted)]">
-          © {YEAR} {siteConfig.name}. {siteConfig.country}.
+          © {YEAR} {siteConfig.name}. {siteConfig.country}.{" "}
+          <Link href="/admin/login" className="text-[var(--color-ink-muted)]/80 underline-offset-4 hover:text-[var(--color-ink)] hover:underline">
+            Acceso
+          </Link>
         </p>
       </div>
     </footer>

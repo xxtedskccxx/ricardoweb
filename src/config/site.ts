@@ -5,7 +5,7 @@
  */
 
 export const siteConfig = {
-  name: "Altamar",
+  name: "Ricardo Ventas",
   tagline: "Colección personal",
   description:
     "Aquí publico propiedades, vehículos y piezas de mi colección en República Dominicana. Si algo te interesa, escríbeme y te cuento más.",

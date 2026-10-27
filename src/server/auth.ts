@@ -23,6 +23,17 @@ export async function readAdminSession(): Promise<AdminSession | null> {
   return row ? { sub: row.id, email: row.email, role: "admin" } : null;
 }
 
+/**
+ * UI hint only (shows "Admin"/"Editar" controls on public pages): checks the
+ * signed cookie without a DB round-trip. Never use it to authorize anything —
+ * every admin page and action still calls requireAdmin().
+ */
+export async function hasAdminSessionCookie(): Promise<boolean> {
+  const token = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value;
+  if (!token) return false;
+  return Boolean(await verifySessionToken(token, getServerEnv().AUTH_SECRET));
+}
+
 /** Server-side authorization boundary for every admin page and mutation. */
 export async function requireAdmin() {
   const admin = await readAdminSession();

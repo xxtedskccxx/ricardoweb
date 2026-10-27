@@ -9,6 +9,7 @@ import {
 } from "@/server/queries";
 import { productFilterSchema } from "@/schemas/product";
 import { absoluteUrl, serializeJsonLd } from "@/lib/seo";
+import { siteConfig } from "@/config/site";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   );
   const title = hasFilters ? "Resultados de búsqueda" : "En venta";
   const description = hasFilters
-    ? "Resultados de propiedades, vehículos y piezas disponibles en la colección de Altamar."
+    ? `Resultados de propiedades, vehículos y piezas disponibles en ${siteConfig.name}.`
     : "Propiedades, vehículos y piezas en venta en República Dominicana. Filtra por tipo o ubicación y revisa cada publicación.";
-  const socialTitle = hasFilters ? "Resultados de búsqueda | Altamar" : "En venta | Altamar";
+  const socialTitle = hasFilters ? `Resultados de búsqueda | ${siteConfig.name}` : `En venta | ${siteConfig.name}`;
 
   return {
     title,
@@ -45,7 +46,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
           url: absoluteUrl("/images/altamar/hero.webp"),
           width: 1200,
           height: 630,
-          alt: "Altamar — propiedades y piezas en República Dominicana",
+          alt: `${siteConfig.name} — propiedades y piezas en República Dominicana`,
         },
       ],
     },
