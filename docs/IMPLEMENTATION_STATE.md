@@ -27,7 +27,8 @@ simplified admin product form added afterwards.
 
 ## Production (2026-10-22)
 
-- Live at https://ricardoweb-two.vercel.app (Vercel Hobby), Neon project
+- Live at https://rickydeventa.com (Vercel Hobby; www and ricardoweb-two.vercel.app
+  redirect there via `next.config.ts`), Neon project
   `ricardoweb` (Postgres 18, aws-us-east-1), Cloudinary folder `altamar/prod`.
 - Repository: github.com/xxtedskccxx/ricardoweb. Every push to `main`
   deploys automatically through the Vercel GitHub integration.
@@ -42,12 +43,12 @@ simplified admin product form added afterwards.
   admins see an "Admin" link in the header and an edit bar on product pages
   (`hasAdminSessionCookie()` is a UI hint only — `requireAdmin()` still guards).
 - `/admin/cuenta`: admins change their own password.
-- Brand name is provisional ("Ricardo Ventas") in `src/config/site.ts`, with
+- Brand name "Ricky De Venta" lives in `src/config/site.ts`, with
   `owner` shown on contact cards.
 
 ## Pending (need the owner)
 
-- Final brand name and custom domain, once the client chooses.
+- Domain rickydeventa.com bought in Vercel (renews Oct 2027).
 - Real inventory.
 
 ## Verification still pending
