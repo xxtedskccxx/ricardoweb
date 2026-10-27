@@ -134,15 +134,18 @@ export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
                 {item.label}
               </Link>
             ))}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                onClick={() => setOpen(false)}
-                className="mt-2 min-h-[44px] rounded-[var(--radius-md)] bg-[var(--color-olive)] px-3 py-3 text-base font-medium text-[var(--color-ivory)]"
-              >
-                Admin
-              </Link>
-            )}
+            <Link
+              href={isAdmin ? "/admin" : "/admin/login"}
+              onClick={() => setOpen(false)}
+              className={[
+                "mt-2 min-h-[44px] rounded-[var(--radius-md)] px-3 py-3 text-base font-medium",
+                isAdmin
+                  ? "bg-[var(--color-olive)] text-[var(--color-ivory)]"
+                  : "border border-[var(--color-border-strong)] text-[var(--color-ink)]",
+              ].join(" ")}
+            >
+              Admin
+            </Link>
           </nav>
         </motion.div>
       )}
