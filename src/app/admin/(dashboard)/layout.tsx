@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin, UnauthorizedError } from "@/server/auth";
 import { logoutAdmin } from "@/server/actions/auth";
@@ -34,7 +35,14 @@ export default async function AdminDashboardLayout({
       <div className="mx-auto w-full max-w-[var(--container-max)] px-4 pt-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-1 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
           <AdminNav />
-          <form action={logoutAdmin} className="self-end sm:self-auto">
+          <div className="flex items-center justify-end gap-1">
+          <Link
+            href="/admin/cuenta"
+            className="flex min-h-11 items-center rounded-[var(--radius-pill)] px-4 text-sm font-medium text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bone)] hover:text-[var(--color-ink)]"
+          >
+            Mi cuenta
+          </Link>
+          <form action={logoutAdmin}>
             <button
               type="submit"
               className="min-h-11 rounded-[var(--radius-pill)] px-4 text-sm font-medium text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bone)] hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-olive)]/30"
@@ -42,6 +50,7 @@ export default async function AdminDashboardLayout({
               Cerrar sesión
             </button>
           </form>
+          </div>
         </div>
       </div>
       <main className="mx-auto w-full min-w-0 max-w-[var(--container-max)] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-10">

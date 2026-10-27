@@ -6,8 +6,8 @@ import type { Route } from "next";
 import { dbQuery } from "@/lib/db";
 import { getServerEnv } from "@/lib/env";
 import { createSessionToken, SESSION_AGE_SECONDS } from "@/lib/auth/session";
-import { verifyPassword } from "@/lib/auth/password";
-import { ADMIN_SESSION_COOKIE } from "@/server/auth";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { ADMIN_SESSION_COOKIE, requireAdmin } from "@/server/auth";
 import type { ActionResult } from "./product";
 
 const GENERIC_LOGIN_ERROR = "Correo o contraseña incorrectos.";
@@ -88,4 +88,37 @@ export async function logoutAdmin(): Promise<void> {
     maxAge: 0,
   });
   redirect("/admin/login");
+}
+
+const MIN_PASSWORD_LENGTH = 12;
+
+export async function changeAdminPassword(
+  _prevState: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { admin } = await requireAdmin();
+  const current = String(formData.get("current") ?? "");
+  const next = String(formData.get("next") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (next.length < MIN_PASSWORD_LENGTH) {
+    return { success: false, error: `La nueva contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.` };
+  }
+  if (next !== confirm) {
+    return { success: false, error: "Las contraseñas nuevas no coinciden." };
+  }
+
+  const rows = await dbQuery<{ password_hash: string }>(
+    "SELECT password_hash FROM admins WHERE id = $1 LIMIT 1",
+    [admin.sub],
+  );
+  if (!rows[0] || !(await verifyPassword(current, rows[0].password_hash))) {
+    return { success: false, error: "La contraseña actual no es correcta." };
+  }
+
+  await dbQuery("UPDATE admins SET password_hash = $1 WHERE id = $2", [
+    await hashPassword(next),
+    admin.sub,
+  ]);
+  return { success: true };
 }

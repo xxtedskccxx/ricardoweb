@@ -4,6 +4,7 @@ import { siteConfig } from "@/config/site";
 import { cardImageSrc } from "@/lib/cloudinary/image-src";
 import { isLocalMediaId } from "@/lib/local-media";
 import { Reveal } from "@/components/motion/Reveal";
+import { buildWhatsAppGreetingUrl } from "@/lib/whatsapp";
 
 export function Hero() {
   return (
@@ -39,6 +40,16 @@ export function Hero() {
               <LinkButton href="/en-venta" size="lg">
                 Ver lo disponible
               </LinkButton>
+              {siteConfig.contact.whatsappNumber && (
+                <LinkButton
+                  href={buildWhatsAppGreetingUrl(siteConfig.contact.whatsappNumber, siteConfig.owner.name)}
+                  external
+                  variant="secondary"
+                  size="lg"
+                >
+                  Escribir por WhatsApp
+                </LinkButton>
+              )}
             </div>
           </Reveal>
         </div>

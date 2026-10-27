@@ -20,6 +20,12 @@ export const siteConfig = {
     { label: "En venta", href: "/en-venta" as const },
   ],
 
+  /** Who buyers talk to — shown on every contact card. */
+  owner: {
+    name: "Ricardo",
+    note: "Vendedor directo · responde por WhatsApp",
+  },
+
   contact: {
     whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "",
     phone: process.env.NEXT_PUBLIC_CONTACT_PHONE ?? "",

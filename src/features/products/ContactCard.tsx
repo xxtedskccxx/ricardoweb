@@ -30,12 +30,12 @@ export function ContactCard({
           className="grid h-14 w-14 place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-sand-soft)] font-display text-xl text-[var(--color-olive)]"
           aria-hidden="true"
         >
-          A
+          {siteConfig.owner.name.charAt(0)}
         </span>
         <span>
-          <strong className="block text-sm">Propietario</strong>
+          <strong className="block text-sm">{siteConfig.owner.name}</strong>
           <span className="text-xs text-[var(--color-ink-muted)]">
-            Contacto directo
+            {siteConfig.owner.note}
           </span>
         </span>
       </div>
@@ -73,8 +73,8 @@ export function ContactCard({
         )}
       </div>
       <p className="mt-4 flex items-center gap-2 text-[11px] text-[var(--color-ink-muted)]">
-        <span aria-hidden="true">▣</span> Tu información se comparte
-        directamente con el propietario.
+        <span aria-hidden="true">▣</span> Hablas directamente con{" "}
+        {siteConfig.owner.name}, sin intermediarios.
       </p>
     </aside>
   );

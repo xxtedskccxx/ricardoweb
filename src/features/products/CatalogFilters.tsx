@@ -28,6 +28,10 @@ export function CatalogFilters({ types, locations }: CatalogFiltersProps) {
   const ordenId = useId();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [pending, startTransition] = useTransition();
+  const activeFilters = ["tipo", "lugar", "orden"].filter((key) => searchParams.get(key)).length;
+  // Phones show only the search box until asked; the wrapper below remounts
+  // on every URL change, so start open when a filter is already applied.
+  const [moreOpen, setMoreOpen] = useState(activeFilters > 0);
 
   const setParam = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -63,6 +67,24 @@ export function CatalogFilters({ types, locations }: CatalogFiltersProps) {
         />
       </div>
 
+      <button
+        type="button"
+        onClick={() => setMoreOpen((open) => !open)}
+        aria-expanded={moreOpen}
+        className="flex min-h-11 items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border-strong)] px-3 text-sm font-medium text-[var(--color-ink)] sm:hidden"
+      >
+        <span>
+          Filtros y orden
+          {activeFilters > 0 && (
+            <span className="ml-2 rounded-[var(--radius-pill)] bg-[var(--color-olive)] px-2 py-0.5 text-xs text-[var(--color-ivory)]">
+              {activeFilters}
+            </span>
+          )}
+        </span>
+        <svg aria-hidden="true" viewBox="0 0 24 24" className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+
+      <div className={moreOpen ? "contents" : "hidden sm:contents"}>
       <div className="flex min-w-0 flex-col gap-1 sm:w-40">
         <label htmlFor={tipoId} className="text-xs font-medium text-[var(--color-ink-muted)]">
           Tipo
@@ -117,6 +139,7 @@ export function CatalogFilters({ types, locations }: CatalogFiltersProps) {
             </option>
           ))}
         </select>
+      </div>
       </div>
     </div>
   );

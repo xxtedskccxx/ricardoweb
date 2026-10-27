@@ -36,9 +36,18 @@ simplified admin product form added afterwards.
 - Contact: WhatsApp/phone 829-672-7363, email ricardo-dlc@outlook.com
   (Vercel env vars; `NEXT_PUBLIC_*` changes need a redeploy).
 
+## Admin as part of the site (2026-10-27)
+
+- Admin pages and login render inside the public header/footer; signed-in
+  admins see an "Admin" link in the header and an edit bar on product pages
+  (`hasAdminSessionCookie()` is a UI hint only — `requireAdmin()` still guards).
+- `/admin/cuenta`: admins change their own password.
+- Brand name is provisional ("Ricardo Ventas") in `src/config/site.ts`, with
+  `owner` shown on contact cards.
+
 ## Pending (need the owner)
 
-- Custom domain, once the client chooses a name.
+- Final brand name and custom domain, once the client chooses.
 - Real inventory.
 
 ## Verification still pending

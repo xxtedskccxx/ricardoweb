@@ -3,6 +3,7 @@ import { ProductGrid } from "@/features/products/ProductGrid";
 import { LinkButton } from "@/components/ui/Button";
 import { getHomepageProducts } from "@/server/queries";
 import { siteConfig } from "@/config/site";
+import { buildWhatsAppGreetingUrl } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -51,12 +52,13 @@ export default async function HomePage() {
             ¿Te interesa alguna publicación?
           </h2>
           <p className="max-w-md text-[var(--color-ink-muted)]">
-            Escríbeme y te comparto los detalles de la pieza que te interesa.
+            Escríbele a {siteConfig.owner.name} y te comparte fotos, detalles y
+            disponibilidad de cualquier publicación.
           </p>
           <div className="flex flex-wrap gap-3">
             {siteConfig.contact.whatsappNumber && (
               <LinkButton
-                href={`https://wa.me/${siteConfig.contact.whatsappNumber}`}
+                href={buildWhatsAppGreetingUrl(siteConfig.contact.whatsappNumber, siteConfig.owner.name)}
                 external
               >
                 Escribir por WhatsApp
@@ -68,6 +70,14 @@ export default async function HomePage() {
                 variant="secondary"
               >
                 Llamar
+              </LinkButton>
+            )}
+            {siteConfig.contact.email && (
+              <LinkButton
+                href={`mailto:${siteConfig.contact.email}`}
+                variant="secondary"
+              >
+                Enviar un correo
               </LinkButton>
             )}
           </div>
